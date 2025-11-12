@@ -1,0 +1,24 @@
+<!DOCTYPE html> <html> <body>
+<canvas id="myCanvas" width="200" height="200" style="border:1px solid black;"></canvas>
+<script>
+var c = document.getElementById("myCanvas");
+var ctx = c.getContext("2d");
+
+function plotLine(x1, y1, x2, y2) {
+    var startPoint = [x1,y1]
+    var endPoint = [x2,y2]
+    // bereken Richtingscoëfficiënt
+    var slope = ((startPoint[1]-endPoint[1])/(startPoint[0]-endPoint[0]))
+
+    // plot lijn
+    for (let x = startPoint[1]; x <=endPoint[0]; x++){
+        let y = Math.round(startPoint[1] + slope * (x - startPoint[0]))
+        ctx.fillRect(x,y,1,1)
+    }
+}
+
+// Testcode. NB: de beoordeling wordt gedaan op basis van andere parameter-waarden.
+plotLine(10, 20, 30, 30);
+plotLine(100, 140, 50, 70);
+</script>
+</body> </html>
