@@ -21,7 +21,7 @@ function draw() {
 
 // Get WebGL 2.0 context
 var gl = document.getElementById("myCanvas").getContext("webgl2");
-
+ 
 // Compile vertex shader
 let vs = gl.createShader(gl.VERTEX_SHADER);
 let vsSource =
