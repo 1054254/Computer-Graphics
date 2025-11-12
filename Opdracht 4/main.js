@@ -93,25 +93,21 @@ let fsSource =
         float lightness = ambient + diffuse + specular;
         
         // Create checker pattern using texture coordinates
-        float scale = 5.0;
-        float checkX = floor(vPos.x * scale);
-        float checkY = floor(vPos.y * scale);
-        float checkZ = floor(vPos.z * scale);
-        float checker = mod(checkX + checkY + checkZ, 5.0);
+        float scale = 10.0;
+        float checkX = floor(vTexCoord.x * scale);
+        float checkY = floor(vTexCoord.y * scale);
+        float checker = mod(checkX + checkY, 5.0);
         
         // Flip texture vertically (WebGL Y-axis is inverted)
         vec2 flippedTexCoord = vec2(vTexCoord.x, 1.0 - vTexCoord.y);
-        vec3 texColor = texture(uTexture, flippedTexCoord* scale * 2.0).rgb;
+        vec3 texColor = texture(uTexture, flippedTexCoord * scale).rgb;
 
         vec3 color1 = texColor; // Use texture by default
 
-        if(originalNormal.y > 0.9 || originalNormal.y < -0.9){
-            color1 = vec3(1.0, 5.0, 0.0); // Red for right face (no texture)
-        }
 
         // Mix between 2 colors on checker pattern
         vec3 color2 = abs(normalizedNormal);         // Color based on face orientation
-        vec3 color = mix(color1, color2, checker) * uIntensity;
+        vec3 color = mix(color1, color2, checker / 2.0) * uIntensity;
         
         fragColor = vec4(color, 1.0);
         fragColor.rgb *= lightness;
@@ -211,7 +207,7 @@ var texture = gl.createTexture();
 // Create an image
 var image = new Image();
 image.crossOrigin = "";
-image.src = "https://1054254.github.io/Computer-Graphics/Opdracht%204/image.jpg";
+image.src = "https://res.cloudinary.com/folia-nl/image/upload/c_auto,w_1240,h_698/v1712246593/DrHouse-AlejandroEsteban-Wiki.jpg";
 
 // Bind the texture buffer
 gl.bindTexture(gl.TEXTURE_2D, texture);
