@@ -211,7 +211,7 @@ var texture = gl.createTexture();
 // Create an image
 var image = new Image();
 image.crossOrigin = "";
-image.src = "https://res.cloudinary.com/folia-nl/image/upload/c_auto,w_1240,h_698/v1712246593/DrHouse-AlejandroEsteban-Wiki.jpg";
+image.src = "https://1054254.github.io/Computer-Graphics/Opdracht%204/image.jpg";
 
 // Bind the texture buffer
 gl.bindTexture(gl.TEXTURE_2D, texture);
