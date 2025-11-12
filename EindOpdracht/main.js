@@ -277,76 +277,96 @@ let meshGroups = [];
 let textures = [];
 let texturesLoaded = 0;
 
-// Function to separate meshes by position
+// Function to separate meshes by connectivity (optimized with spatial hashing)
 function separateMeshes(vertices) {
-    const groups = [];
     const vertexCount = vertices.length / 8;
+    const triangleCount = vertexCount / 3;
     
-    // First pass: find all unique positions (center of each object)
-    const positions = [];
-    for (let i = 0; i < vertexCount; i += 100) { // Sample every 100th vertex
-        const x = vertices[i * 8 + 0];
-        const y = vertices[i * 8 + 1];
-        const z = vertices[i * 8 + 2];
-        positions.push({x, y, z});
+    console.log("Separating", triangleCount, "triangles into meshes...");
+    
+    // Build vertex position hash map for quick lookups
+    const vertexMap = new Map();
+    
+    function getVertexKey(vIdx) {
+        const x = Math.round(vertices[vIdx * 8 + 0] * 1000);
+        const y = Math.round(vertices[vIdx * 8 + 1] * 1000);
+        const z = Math.round(vertices[vIdx * 8 + 2] * 1000);
+        return `${x},${y},${z}`;
     }
     
-    // Calculate distances to find clusters
-    const centers = [];
-    const minDistance = 10; // Minimum distance between object centers
-    
-    for (let pos of positions) {
-        let tooClose = false;
-        for (let center of centers) {
-            const dx = pos.x - center.x;
-            const dy = pos.y - center.y;
-            const dz = pos.z - center.z;
-            const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-            if (dist < minDistance) {
-                tooClose = true;
-                break;
-            }
-        }
-        if (!tooClose) {
-            centers.push(pos);
-        }
-    }
-    
-    console.log("Found", centers.length, "object centers");
-    
-    // Second pass: assign each vertex to nearest center
-    for (let c = 0; c < centers.length; c++) {
-        groups[c] = [];
-    }
-    
+    // Map each unique position to list of vertex indices
     for (let i = 0; i < vertexCount; i++) {
-        const x = vertices[i * 8 + 0];
-        const y = vertices[i * 8 + 1];
-        const z = vertices[i * 8 + 2];
-        
-        // Find nearest center
-        let minDist = Infinity;
-        let nearestGroup = 0;
-        
-        for (let g = 0; g < centers.length; g++) {
-            const dx = x - centers[g].x;
-            const dy = y - centers[g].y;
-            const dz = z - centers[g].z;
-            const dist = Math.sqrt(dx*dx + dy*dy + dz*dz);
-            
-            if (dist < minDist) {
-                minDist = dist;
-                nearestGroup = g;
-            }
+        const key = getVertexKey(i);
+        if (!vertexMap.has(key)) {
+            vertexMap.set(key, []);
         }
-        
-        // Add vertex to nearest group
-        for (let j = 0; j < 8; j++) {
-            groups[nearestGroup].push(vertices[i * 8 + j]);
+        vertexMap.get(key).push(i);
+    }
+    
+    // Build adjacency list (which triangles are connected)
+    const triangleAdj = new Array(triangleCount);
+    for (let t = 0; t < triangleCount; t++) {
+        triangleAdj[t] = new Set();
+    }
+    
+    // For each vertex position, connect all triangles that share it
+    for (let [key, vIndices] of vertexMap) {
+        if (vIndices.length > 1) {
+            const triangles = vIndices.map(v => Math.floor(v / 3));
+            for (let i = 0; i < triangles.length; i++) {
+                for (let j = i + 1; j < triangles.length; j++) {
+                    triangleAdj[triangles[i]].add(triangles[j]);
+                    triangleAdj[triangles[j]].add(triangles[i]);
+                }
+            }
         }
     }
     
-    console.log("Mesh group sizes:", groups.map(g => g.length / 8));
+    // Flood fill to find connected components
+    const triangleToGroup = new Array(triangleCount).fill(-1);
+    let groupCount = 0;
+    
+    for (let t = 0; t < triangleCount; t++) {
+        if (triangleToGroup[t] === -1) {
+            // BFS to find all connected triangles
+            const queue = [t];
+            triangleToGroup[t] = groupCount;
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                for (let neighbor of triangleAdj[current]) {
+                    if (triangleToGroup[neighbor] === -1) {
+                        triangleToGroup[neighbor] = groupCount;
+                        queue.push(neighbor);
+                    }
+                }
+            }
+            groupCount++;
+        }
+    }
+    
+    console.log("Found", groupCount, "separate mesh groups");
+    
+    // Build groups array
+    const groups = new Array(groupCount);
+    for (let g = 0; g < groupCount; g++) {
+        groups[g] = [];
+    }
+    
+    for (let t = 0; t < triangleCount; t++) {
+        const groupId = triangleToGroup[t];
+        const vertexStart = t * 3;
+        
+        for (let v = 0; v < 3; v++) {
+            for (let j = 0; j < 8; j++) {
+                groups[groupId].push(vertices[(vertexStart + v) * 8 + j]);
+            }
+        }
+    }
+    
+    const groupSizes = groups.map(g => g.length / 8);
+    console.log("Mesh vertex counts:", groupSizes);
+    
     return groups.map(g => new Float32Array(g));
 }
 
