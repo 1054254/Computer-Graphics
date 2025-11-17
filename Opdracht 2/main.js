@@ -52,9 +52,10 @@ function drawRectangle4Point(x1,y1,x2,y2,x3,y3,x4,y4,colour){
     plotLine(x3,y3,x4,y4,colour)
 }
 
-function drawCircle(x,y,r){
+function drawCircle(x,y,r,colour){
     ctx.beginPath();
     ctx.arc(x,y,r,0,2 * Math.PI);
+    ctx.strokeStyle = colour;
     ctx.stroke();
 }
 
@@ -91,7 +92,7 @@ function rotateRect(angle) {
     globaly2 = rotated[2][1]
 }
 
-var globalColour = "black   "
+var globalColour = "black"
 
 var globalx1 = 10
 var globaly1 = 20
@@ -104,7 +105,8 @@ var rotatey = 100
 setInterval(() => {
     ctx.clearRect(0,0,640,480); // clear all
     rotateRect(4);
-    drawRectangle2Point(globalx1,globaly1,globalx2,globaly2,globalColour)    
+    drawRectangle2Point(globalx1,globaly1,globalx2,globaly2,globalColour)
+    drawCircle(c.getBoundingClientRect().width/2,c.getBoundingClientRect().height/2,30,globalColour)  
 }, 50);
 
 
