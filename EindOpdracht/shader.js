@@ -35,12 +35,6 @@ function fragmentShader() {
         vec3 texColor = texture2D(uTexture, vTexCoord).rgb;
         vec3 color;
         
-        // If this is the sun, make it emissive (bright)
-        if (uIsSun) {
-            color = texColor * uIntensity * 2.0;
-            gl_FragColor = vec4(color, 1.0);
-            return;
-        }
         
         // Regular lighting for planets
         vec3 normalizedNormal = normalize(vNormal);
@@ -69,6 +63,8 @@ function fragmentShader() {
             color = texColor * uIntensity;
         }
         gl_FragColor = vec4(color * lightness, 1.0);
-        
+        if (uIsSun) {
+            gl_FragColor = vec4(color * 2.0, 1.0); // Extra bright for sun
+        }
     }`;
 }
