@@ -1,12 +1,12 @@
 // "Solar system" (https://skfb.ly/oKYnC) by dannzjs is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
 let animationSpeed = 5; // speed of animtion
 let intensity = 1.0; // Initial intensity
-let lightPosition = new THREE.Vector3(2.0, 2.0, 2.0);
+let lightPosition = new THREE.Vector3(0.0, 0.0, 0.0);
 let time = 0;
+let checkerEnabled = 0.0; // Toggle for checker pattern
 
 // Three.js Setup
 let solarSystem;
-let pointLight, ambientLight;
 let meshGroups = [];
 let textures = [];
 let texturesLoaded = 0;
@@ -22,14 +22,6 @@ camera.position.set(0, 25, 50);
 camera.lookAt(0, 0, 0);
 
 const loader = new THREE.GLTFLoader();
-
-// Add lighting to the scene
-pointLight = new THREE.PointLight(0xffffff, intensity, 0);
-pointLight.position.copy(lightPosition);
-scene.add(pointLight);
-
-ambientLight = new THREE.AmbientLight(0x404040, 0.5);
-scene.add(ambientLight);
 
 // Load the solar system model from github
 loader.load(
@@ -111,16 +103,37 @@ function setTexture(mesh) {
         return;
     }
     
+    // Check if this is the sun
+    const isSun = parentName.includes('sun');
+    
     const textureLoader = new THREE.TextureLoader();
     let texturePath = `https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/textures/gltf_embedded_${fileNumber}.jpeg`
     
     textureLoader.load(
         texturePath,
         function (texture) {
-            // Apply the texture to the mesh
-            mesh.material.map = texture;
-            mesh.material.needsUpdate = true;
-            console.log(`Texture applied to ${mesh.name}`);
+            // Set texture wrapping and filtering
+            texture.wrapS = THREE.RepeatWrapping;
+            texture.wrapT = THREE.RepeatWrapping;
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            
+            // Create ShaderMaterial with custom shaders
+            const shaderMaterial = new THREE.ShaderMaterial({
+                uniforms: {
+                    uTexture: { value: texture },
+                    uIntensity: { value: intensity },
+                    uLightPos: { value: lightPosition },
+                    uCheckerEnabled: { value: checkerEnabled },
+                    uIsSun: { value: isSun }
+                },
+                vertexShader: vertexShader(),
+                fragmentShader: fragmentShader()
+            });
+            
+            mesh.material = shaderMaterial;
+            mesh.material.uniformsNeedUpdate = true;
+            console.log(`Texture and shader applied to ${mesh.name}`, isSun ? '(SUN - emissive)' : '');
         },
         undefined,
         function (error) {
@@ -308,6 +321,17 @@ addEventListener('keydown', (event) => {
             break;
         case 'ArrowDown':
             animationSpeed = Math.max(0, animationSpeed - 0.1);
+            break;
+        case 'C':
+        case 'c':
+            checkerEnabled = checkerEnabled > 0.5 ? 0.0 : 1.0;
+            // Update all mesh materials
+            meshGroups.forEach((mesh) => {
+                if (mesh.material && mesh.material.uniforms && mesh.material.uniforms.uCheckerEnabled) {
+                    mesh.material.uniforms.uCheckerEnabled.value = checkerEnabled;
+                }
+            });
+            console.log('Checker pattern:', checkerEnabled > 0.5 ? 'ON' : 'OFF');
             break;
     }
 })
