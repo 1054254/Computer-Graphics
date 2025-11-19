@@ -1,6 +1,39 @@
 var c = document.getElementById("myCanvas");
 var ctx = c.getContext("2d");
 
+function plotLine(x1, y1, x2, y2, colour) {
+    var startPoint, endPoint
+
+    // maak startpunt de kleinste x-waarde
+    if (x1 < x2){
+        var startPoint = [x1,y1]
+        var endPoint = [x2,y2]
+    }else{
+        var startPoint = [x2,y2]
+        var endPoint = [x1,y1]
+    }
+
+    ctx.fillStyle = colour;
+
+    // bereken Richtingscoëfficiënt
+    var slope = (endPoint[1] - startPoint[1]) / (endPoint[0] - startPoint[0]);
+    
+    // bepaal of we per x of per y moeten tekenen aan de hand van de richtingscoëfficiënt
+    if (startPoint[1] === endPoint[1] && startPoint[0] != endPoint[0]) {
+        // teken lijn per x pixel
+        for (let x = startPoint[0]; x <= endPoint[0]; x++){
+            let y = Math.round(startPoint[1] + slope * (x - startPoint[0]));    
+            ctx.fillRect(x,y,1,1)
+        }
+    }else{
+        // teken lijn per y pixel
+        for (let y = Math.min(startPoint[1], endPoint[1]); y <= Math.max(startPoint[1], endPoint[1]); y++){
+            let x = Math.round(startPoint[0] + (y - startPoint[1]) / slope);
+            ctx.fillRect(x,y,1,1)
+        }
+    }
+}
+
 
 function drawTriangle(x1,y1,x2,y2,x3,y3,colour){
     plotLine(x1,y1,x2,y2,colour)
@@ -43,11 +76,11 @@ function rotateRect(angle) {
         [globalx2, globaly2],
         [globalx1, globaly2]
     ];
+    let rad = angle * Math.PI / 180
 
     let rotated = corners.map(([x, y]) => {
         let dx = x - cx
         let dy = y - cy
-        let rad = angle * Math.PI / 180
         let xNew = cx + dx * Math.cos(rad) - dy * Math.sin(rad)
         let yNew = cy + dx * Math.sin(rad) + dy * Math.cos(rad)
         return [xNew, yNew];
