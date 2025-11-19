@@ -2,39 +2,6 @@ var c = document.getElementById("myCanvas");
 var ctx = c.getContext("2d");
 
 
-
-function plotLine(x1, y1, x2, y2, colour) {
-    var startPoint, endPoint
-    
-    if (x1 < x2){
-        var startPoint = [x1,y1]
-        var endPoint = [x2,y2]
-    }else{
-        var startPoint = [x2,y2]
-        var endPoint = [x1,y1]
-    }
-    // set colour
-    ctx.fillStyle = colour;
-
-    // draw straight lines on the y axis
-    if (x1 === x2) {
-        const [startY, endY] = y1 < y2 ? [y1, y2] : [y2, y1];
-        for (let y = startY; y <= endY; y++) {
-            ctx.fillRect(x1, y, 1, 1);
-        }
-        return;
-    }
-
-    // bereken Richtingscoëfficiënt
-    var slope = (endPoint[1] - startPoint[1]) / (endPoint[0] - startPoint[0]);
-
-    // plot lijn per pixel
-    for (let x = startPoint[0]; x <= endPoint[0]; x++){
-        let y = Math.round(startPoint[1] + slope * (x - startPoint[0]));    
-        ctx.fillRect(x,y,1,1)
-    }
-}
-
 function drawTriangle(x1,y1,x2,y2,x3,y3,colour){
     plotLine(x1,y1,x2,y2,colour)
     plotLine(x1,y1,x3,y3,colour)

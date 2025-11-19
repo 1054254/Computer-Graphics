@@ -5,20 +5,42 @@ var c = document.getElementById("myCanvas");
 var ctx = c.getContext("2d");
 
 function plotLine(x1, y1, x2, y2) {
-    var startPoint = [x1,y1]
-    var endPoint = [x2,y2]
-    // bereken Richtingscoëfficiënt
-    var slope = ((startPoint[1]-endPoint[1])/(startPoint[0]-endPoint[0]))
+    var startPoint, endPoint
+    
+    if (x1 < x2){
+        var startPoint = [x1,y1]
+        var endPoint = [x2,y2]
+    }else{
+        var startPoint = [x2,y2]
+        var endPoint = [x1,y1]
+    }
 
-    // plot lijn
-    for (let x = startPoint[1]; x <=endPoint[0]; x++){
-        let y = Math.round(startPoint[1] + slope * (x - startPoint[0]))
+    // draw straight lines on the y axis
+    if (x1 === x2) {
+        const [startY, endY] = y1 < y2 ? [y1, y2] : [y2, y1];
+        for (let y = startY; y <= endY; y++) {
+            ctx.fillRect(x1, y, 1, 1);
+        }
+        return;
+    }
+
+    // bereken Richtingscoëfficiënt
+    var slope = (endPoint[1] - startPoint[1]) / (endPoint[0] - startPoint[0]);
+
+    // plot lijn per pixel
+    for (let x = startPoint[0]; x <= endPoint[0]; x++){
+        let y = Math.round(startPoint[1] + slope * (x - startPoint[0]));    
         ctx.fillRect(x,y,1,1)
     }
 }
 
+
 // Testcode. NB: de beoordeling wordt gedaan op basis van andere parameter-waarden.
 plotLine(10, 20, 30, 30);
-plotLine(100, 140, 50, 70);
+plotLine(40, 30, 20, 20);
+plotLine(60, 160, 60, 40);
+plotLine(70, 40, 70, 160);
+
+
 </script>
 </body> </html>
