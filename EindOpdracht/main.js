@@ -18,7 +18,7 @@ let renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 let scene = new THREE.Scene();
 
 let camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 25, 50);
+camera.position.set(0, 25, 75);
 camera.lookAt(0, 0, 0);
 
 const loader = new THREE.GLTFLoader();
@@ -32,38 +32,42 @@ loader.load(
                 meshGroups.push(child);
             }
         });
+
+            let sun     = getByParentPlanetMesh("sun");
+            let earth   = getByParentPlanetMesh("erath");
+            let moon    = getByParentPlanetMesh("moon");
+
+            let mars    = getByParentPlanetMesh("mars");
+            let venus   = getByParentPlanetMesh("venus");
+            let jupiter = getByParentPlanetMesh("jupiter");
+            let saturn  = getByParentPlanetMesh("saturn");
+            let saturn_ring = getByParentPlanetMesh("saturn_ring");
+            let uranus  = getByParentPlanetMesh("uranus");
+            let neptune = getByParentPlanetMesh("neptune");
+            let pluto   = getByParentPlanetMesh("pluto");
+            let mercury = getByParentPlanetMesh("mercury");
+            
+
+            // Just rename safely (if object exists):
+            if (sun)     sun.name = "sun";
+            if (earth)   earth.name = "earth";
+            if (moon)    moon.name = "moon";
+            if (mars)    mars.name = "mars";
+            if (venus)   venus.name = "venus";
+            if (jupiter) jupiter.name = "jupiter";
+            if (saturn)  saturn.name = "saturn";
+            if (saturn_ring) saturn_ring.name = "saturn_ring";
+            if (uranus)  uranus.name = "uranus";
+            if (neptune) neptune.name = "neptune";
+            if (pluto)   pluto.name = "pluto";
+            if (mercury) mercury.name = "mercury";
         
         meshGroups.forEach((mesh) => {
             setTexture(mesh);
             console.log('Loaded mesh:', mesh.name, 'Position:', mesh.position, 'Scale:', mesh.scale, 'Parent:', mesh.parent?.name);
         })
 
-    let sun     = getByParentPlanetMesh("sun");
-    let earth   = getByParentPlanetMesh("erath");
-    let moon    = getByParentPlanetMesh("moon");
 
-    let mars    = getByParentPlanetMesh("mars");
-    let venus   = getByParentPlanetMesh("venus");
-    let jupiter = getByParentPlanetMesh("jupiter");
-    let saturn  = getByParentPlanetMesh("saturn");
-    let uranus  = getByParentPlanetMesh("uranus");
-    let neptune = getByParentPlanetMesh("neptune");
-    let pluto   = getByParentPlanetMesh("pluto");
-    let mercury = getByParentPlanetMesh("mercury");
-    
-
-    // Just rename safely (if object exists):
-    if (sun)     sun.name = "sun";
-    if (earth)   earth.name = "earth";
-    if (moon)    moon.name = "moon";
-    if (mars)    mars.name = "mars";
-    if (venus)   venus.name = "venus";
-    if (jupiter) jupiter.name = "jupiter";
-    if (saturn)  saturn.name = "saturn";
-    if (uranus)  uranus.name = "uranus";
-    if (neptune) neptune.name = "neptune";
-    if (pluto)   pluto.name = "pluto";
-    if (mercury) mercury.name = "mercury";
 
     moon.parent.parent.visible = false;
 
@@ -76,27 +80,29 @@ loader.load(
     }
 );
 
-function getPlanetTextureNumber(planetName) {
+function getTextureNumber(planetName) {
     const searchName = planetName.toLowerCase();
     
-    if (searchName.includes('moon')) return 0;
-    if (searchName.includes('sun')) return 1;
+    if (searchName.includes('moon')) return 9;
+    if (searchName.includes('sun')) return 10;
     if (searchName.includes('erath') || searchName.includes('earth')) return 2;
     if (searchName.includes('mars')) return 3;
-    if (searchName.includes('venus')) return 4;
-    if (searchName.includes('jupiter')) return 5;
-    if (searchName.includes('saturn')) return 6;
+    if (searchName.includes('venus')) return 1;
+    if (searchName.includes('jupiter')) return 4;
+    if (searchName.includes('saturn_ring')) return 6; // Check ring BEFORE saturn
+    if (searchName.includes('saturn')) return 5;
     if (searchName.includes('uranus')) return 7;
     if (searchName.includes('neptune')) return 8;
     if (searchName.includes('pluto')) return 9;
-    if (searchName.includes('mercury')) return 10;
+    if (searchName.includes('mercury')) return 0;
     
+    console.warn('Unknown planet for texture number:', planetName);
     return null;
 }
 
 function setTexture(mesh) {
     const parentName = mesh.parent?.name?.toLowerCase() || '';
-    const fileNumber = getPlanetTextureNumber(parentName);
+    const fileNumber = getTextureNumber(parentName);
     
     if (fileNumber === null) {
         console.warn('Unknown parent for mesh:', mesh.name, 'Parent:', parentName);
@@ -107,8 +113,13 @@ function setTexture(mesh) {
     const isSun = parentName.includes('sun');
     
     const textureLoader = new THREE.TextureLoader();
-    let texturePath = `https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/textures/gltf_embedded_${fileNumber}.jpeg`
-    
+    let texturePath = `https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/textures/gltf_embedded_${fileNumber}.`
+
+    if (fileNumber === 6) {
+        texturePath += 'png';
+    } else {
+        texturePath += 'jpeg';
+    }
     textureLoader.load(
         texturePath,
         function (texture) {
@@ -148,9 +159,14 @@ function getByParentPlanetMesh(planetName) {
     
     for (let mesh of meshGroups) {
         const parentName = mesh.parent?.name?.toLowerCase() || '';
+        const meshName = mesh.name?.toLowerCase() || '';
         
         // Match the planet name in the parent name
         if (parentName.includes(searchName) && !parentName.includes('beziercircle')) {
+            // Special case: for Saturn, exclude the ring mesh
+            if (searchName === 'saturn' && meshName.includes('ring')) {
+                continue;
+            }
             return mesh;
         }
     }
@@ -288,34 +304,6 @@ cameraRadius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
 
 addEventListener('keydown', (event) => {
     switch(event.key) {
-        case 'W':
-        case 'w':
-            cameraRadius = Math.max(10, cameraRadius - moveCameraSpeed); // Zoom in
-            camera.position.x = Math.cos(cameraAngle) * cameraRadius;
-            camera.position.z = Math.sin(cameraAngle) * cameraRadius;
-            camera.lookAt(0, 0, 0);
-            break;
-        case 'S':
-        case 's':
-            cameraRadius += moveCameraSpeed; // Zoom out
-            camera.position.x = Math.cos(cameraAngle) * cameraRadius;
-            camera.position.z = Math.sin(cameraAngle) * cameraRadius;
-            camera.lookAt(0, 0, 0);
-            break;
-        case 'A':
-        case 'a':
-            camera.position.x = Math.cos(cameraAngle) * cameraRadius;
-            camera.position.z = Math.sin(cameraAngle) * cameraRadius;
-            cameraAngle -= Math.PI / 18 * moveCameraSpeed; // Rotate camera angle
-            camera.lookAt(0, 0, 0); 
-            break; 
-        case 'D':
-        case 'd':
-            camera.position.x = Math.cos(cameraAngle) * cameraRadius;
-            camera.position.z = Math.sin(cameraAngle) * cameraRadius;
-            cameraAngle += Math.PI / 18 * moveCameraSpeed; // Rotate camera angle
-            camera.lookAt(0, 0, 0);
-            break;
         case 'ArrowUp': 
             animationSpeed += 0.1;
             break;

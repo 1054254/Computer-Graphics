@@ -18,7 +18,6 @@ function vertexShader() {
 function fragmentShader() {
     return `
     precision mediump float;
-    
     uniform float uIntensity;
     uniform vec3 uLightPos;
     uniform sampler2D uTexture;
@@ -64,7 +63,7 @@ function fragmentShader() {
         }
         gl_FragColor = vec4(color * lightness, 1.0);
         if (uIsSun) {
-            gl_FragColor = vec4(color * 2.0, 1.0); // Extra bright for sun
+            gl_FragColor = vec4(color * 1.5, 1.0); // Extra bright for sun
         }
     }`;
 }
