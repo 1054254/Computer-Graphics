@@ -16,22 +16,22 @@ function plotLine(x1, y1, x2, y2) {
         var endPoint = [x1,y1]
     }
 
-    // teken rechte lijnen op de y-as
-    if (x1 === x2) {
-        const [startY, endY] = y1 < y2 ? [y1, y2] : [y2, y1];
-        for (let y = startY; y <= endY; y++) {
-            ctx.fillRect(x1, y, 1, 1);
-        }
-        return;
-    }
-
     // bereken Richtingscoëfficiënt
     var slope = (endPoint[1] - startPoint[1]) / (endPoint[0] - startPoint[0]);
-
-    // teken lijn per pixel
-    for (let x = startPoint[0]; x <= endPoint[0]; x++){
-        let y = Math.round(startPoint[1] + slope * (x - startPoint[0]));    
-        ctx.fillRect(x,y,1,1)
+    
+    // bepaal of we per x of per y moeten tekenen aan de hand van de richtingscoëfficiënt
+    if (startPoint[1] === endPoint[1] && startPoint[0] != endPoint[0]) {
+        // teken lijn per x pixel
+        for (let x = startPoint[0]; x <= endPoint[0]; x++){
+            let y = Math.round(startPoint[1] + slope * (x - startPoint[0]));    
+            ctx.fillRect(x,y,1,1)
+        }
+    }else{
+        // teken lijn per y pixel
+        for (let y = Math.min(startPoint[1], endPoint[1]); y <= Math.max(startPoint[1], endPoint[1]); y++){
+            let x = Math.round(startPoint[0] + (y - startPoint[1]) / slope);
+            ctx.fillRect(x,y,1,1)
+        }
     }
 }
 
@@ -43,6 +43,7 @@ plotLine(60, 160, 60, 40);
 plotLine(70, 40, 70, 160);
 plotLine(180, 20, 60, 20);
 plotLine(60, 30, 180, 30);
+plotLine(170, 180, 180, 60);
 
 </script>
 </body> </html>
