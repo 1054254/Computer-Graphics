@@ -65,7 +65,7 @@ function keyDownChangeColour(keydown, key,colour){
     }
 }
 
-// Rotate rectangle around its center
+// draai rechthoek om zijn middelpunt
 function rotateRect(angle) {
     let cx = (globalx1 + globalx2) / 2
     let cy = (globaly1 + globaly2) / 2
