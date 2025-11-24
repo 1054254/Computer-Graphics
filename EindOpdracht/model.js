@@ -150,7 +150,7 @@ function parseSTL(fileContent) {
 function getUrl(name) {
     let texturePath = `https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/textures/gltf_embedded_${name}.`
 
-    if (name === ) {
+    if (name === 'saturn_ring') {
         texturePath += 'png';
     } else {
         texturePath += 'jpeg';
