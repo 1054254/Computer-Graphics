@@ -1,12 +1,11 @@
 // "Solar system" (https://skfb.ly/oKYnC) by dannzjs is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
 let animationSpeed = 5; // speed of animtion
 let intensity = 1.0; // Initial intensity
-let lightPosition = new THREE.Vector3(0.0, 0.0, 0.0);
+let vecLightPos = {x: 2.0, y: 2.0, z: 2.0};
 let time = 0;
 let checkerEnabled = 0.0; // Toggle for checker pattern
 
-// Three.js Setup
-let solarSystem;
+
 let meshGroups = [];
 let textures = [];
 let texturesLoaded = 0;
@@ -14,71 +13,163 @@ let startTime = Date.now();
 let planets = []; // Array to store planet data with orbit info
 
 let canvas = document.createElement('canvas');
-let renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
-let scene = new THREE.Scene();
+canvas.width = 600;
+canvas.height = 600;
+document.body.appendChild(canvas);
 
-let camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-camera.position.set(0, 25, 75);
-camera.lookAt(0, 0, 0);
+var gl = canvas.getContext("webgl2");
+if (!gl) {
+    alert('WebGL2 not supported');
+    throw new Error('WebGL2 not supported');
+}
 
-const loader = new THREE.GLTFLoader();
+gl.viewport(0, 0, canvas.width, canvas.height);
+gl.enable(gl.DEPTH_TEST);
+gl.clearColor(0.1, 0.1, 0.1, 1.0);
+
+// Create shaders
+
+const vsSource = vertexShader();
+const fsSource = fragmentShader();
+
+// Compile shaders
+const vs = gl.createShader(gl.VERTEX_SHADER);
+gl.shaderSource(vs, vsSource);
+gl.compileShader(vs);
+if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+    console.error('Vertex shader error:', gl.getShaderInfoLog(vs));
+}
+
+const fs = gl.createShader(gl.FRAGMENT_SHADER);
+
+gl.shaderSource(fs, fsSource);
+gl.compileShader(fs);
+if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+    console.error('Fragment shader error:', gl.getShaderInfoLog(fs));
+}
+
+const program = gl.createProgram();
+gl.attachShader(program, vs);
+gl.attachShader(program, fs);
+gl.linkProgram(program);
+if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.error('Program link error:', gl.getProgramInfoLog(program));
+}
+gl.useProgram(program);
+
+let uIntensityLoc = gl.getUniformLocation(program, "uIntensity");
+gl.uniform1f(uIntensityLoc, 0.5);
+
+let uLightPosLoc = gl.getUniformLocation(program, "uLightPos");
+gl.uniform3f(uLightPosLoc, vecLightPos.x, vecLightPos.y, vecLightPos.z);
+
+// Perspective projection matrix
+let projectionLocation = gl.getUniformLocation(program, "projection");
+let projection = new Float32Array([1, 0, 0, 0,
+                                    0, 1, 0, 0,
+                                    0, 0, -1, -1,
+                                    0, 0, -1, 0]); // In column-major order
+gl.uniformMatrix4fv(projectionLocation, false, projection); // Transpose field MUST be FALSE
+
+// Translation matrix; move everything 3 units to the back
+let scale = 0.1;
+let translationLocation = gl.getUniformLocation(program, "translation");
+let translation = new Float32Array([scale, 0, 0, 0,
+                                    0, scale, 0, 0,
+                                    0, 0, scale, 0,
+                                    0, 0, -3, 1]); // In column-major order
+gl.uniformMatrix4fv(translationLocation, false, translation); // Transpose field MUST be FALSE
+
+// Fixed rotation matrix; rotate 30° around x-axis
+let fixedRotationLocation = gl.getUniformLocation(program, "fixedRotation");
+let c = Math.cos(Math.PI / 6);
+let s = Math.sin(Math.PI / 6);
+let fixedRotation = new Float32Array([1,  0, 0, 0,
+                                        0,  c, s, 0,
+                                        0, -s, c, 0,
+                                        0,  0, 0, 1]); // In column-major order
+gl.uniformMatrix4fv(fixedRotationLocation, false, fixedRotation); // Transpose field MUST be FALSE
 
 // Load the solar system model from github
-loader.load(
-    'https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/source/solar_system_animation.glb',
-    function (gltf) {
-        gltf.scene.traverse(function (child) {
-            if (child.isMesh) {
-                meshGroups.push(child);
-            }
-        });
+let stlFileUrl = 'https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/stl/Sun.stl';
+let vertices = new Float32Array([]);
 
-            let sun     = getByParentPlanetMesh("sun");
-            let earth   = getByParentPlanetMesh("erath");
-            let moon    = getByParentPlanetMesh("moon");
-
-            let mars    = getByParentPlanetMesh("mars");
-            let venus   = getByParentPlanetMesh("venus");
-            let jupiter = getByParentPlanetMesh("jupiter");
-            let saturn  = getByParentPlanetMesh("saturn");
-            let saturn_ring = getByParentPlanetMesh("saturn_ring");
-            let uranus  = getByParentPlanetMesh("uranus");
-            let neptune = getByParentPlanetMesh("neptune");
-            let pluto   = getByParentPlanetMesh("pluto");
-            let mercury = getByParentPlanetMesh("mercury");
-            
-
-            // Just rename safely (if object exists):
-            if (sun)     sun.name = "sun";
-            if (earth)   earth.name = "earth";
-            if (moon)    moon.name = "moon";
-            if (mars)    mars.name = "mars";
-            if (venus)   venus.name = "venus";
-            if (jupiter) jupiter.name = "jupiter";
-            if (saturn)  saturn.name = "saturn";
-            if (saturn_ring) saturn_ring.name = "saturn_ring";
-            if (uranus)  uranus.name = "uranus";
-            if (neptune) neptune.name = "neptune";
-            if (pluto)   pluto.name = "pluto";
-            if (mercury) mercury.name = "mercury";
+// Load STL file
+fetch(stlFileUrl)
+    .then(response => {
+        console.log('Fetching STL...');
+        return response.text();
+    })
+    .then(fileContent => {
+        console.log('STL downloaded, size:', fileContent.length, 'bytes');
         
-        meshGroups.forEach((mesh) => {
-            setTexture(mesh);
-            console.log('Loaded mesh:', mesh.name, 'Position:', mesh.position, 'Scale:', mesh.scale, 'Parent:', mesh.parent?.name);
-        })
+        // Use setTimeout to allow UI to update
+        setTimeout(() => {
+            try {
+                vertices = parseSTL(fileContent);
+                console.log('STL parsed, vertices:', vertices.length / 8);
+                
+                // Update buffer after loading
+                gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
+                gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+                
+                // Remove loading indicator
+                console.log('Ready to render!');
+            } catch (e) {
+                console.error('Parse error:', e);
 
+            }
+        }, 100);
+    })
+    .catch(error => {
+        console.error('Error loading STL:', error);
+    });
 
+let arrayBuffer = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
+gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
-    moon.parent.parent.visible = false;
+// Set up vertex attributes
+const aPos = gl.getAttribLocation(program, 'aPos');
+gl.vertexAttribPointer(aPos, 3, gl.FLOAT, false, 32, 0);
+gl.enableVertexAttribArray(aPos);
 
-        solarSystem = gltf.scene;
-        scene.add(solarSystem);
-    },
-    undefined,
-    function (error) {
-        console.error('An error happened while loading the model:', error);
-    }
-);
+const aNormal = gl.getAttribLocation(program, 'aNormal');
+gl.vertexAttribPointer(aNormal, 3, gl.FLOAT, false, 32, 12);
+gl.enableVertexAttribArray(aNormal);
+
+const aTexCoord = gl.getAttribLocation(program, 'aTexCoord');
+gl.vertexAttribPointer(aTexCoord, 2, gl.FLOAT, false, 32, 24);
+gl.enableVertexAttribArray(aTexCoord);
+
+var rotationAngleLocation = gl.getUniformLocation(program, "rotationAngle");
+
+// Load Sun texture
+const texture = gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D, texture);
+
+// Create a placeholder 1x1 pixel while loading
+gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([255, 200, 100, 255]));
+
+const image = new Image();
+image.crossOrigin = "anonymous";
+image.src = 'https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/textures/gltf_embedded_10.jpeg';
+image.onload = () => {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+    gl.generateMipmap(gl.TEXTURE_2D);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    console.log('Sun texture loaded!');
+};
+
+// Set texture unit
+const uTextureLocation = gl.getUniformLocation(program, 'uTexture');
+gl.uniform1i(uTextureLocation, 0);
+gl.activeTexture(gl.TEXTURE0);
+gl.bindTexture(gl.TEXTURE_2D, texture);
 
 function getTextureNumber(planetName) {
     const searchName = planetName.toLowerCase();
@@ -112,7 +203,6 @@ function setTexture(mesh) {
     // Check if this is the sun
     const isSun = parentName.includes('sun');
     
-    const textureLoader = new THREE.TextureLoader();
     let texturePath = `https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/textures/gltf_embedded_${fileNumber}.`
 
     if (fileNumber === 6) {
@@ -120,187 +210,55 @@ function setTexture(mesh) {
     } else {
         texturePath += 'jpeg';
     }
-    textureLoader.load(
-        texturePath,
-        function (texture) {
-            // Set texture wrapping and filtering
-            texture.wrapS = THREE.RepeatWrapping;
-            texture.wrapT = THREE.RepeatWrapping;
-            texture.minFilter = THREE.LinearFilter;
-            texture.magFilter = THREE.LinearFilter;
-            
-            // Create ShaderMaterial with custom shaders
-            const shaderMaterial = new THREE.ShaderMaterial({
-                uniforms: {
-                    uTexture: { value: texture },
-                    uIntensity: { value: intensity },
-                    uLightPos: { value: lightPosition },
-                    uCheckerEnabled: { value: checkerEnabled },
-                    uIsSun: { value: isSun }
-                },
-                vertexShader: vertexShader(),
-                fragmentShader: fragmentShader()
-            });
-            
-            mesh.material = shaderMaterial;
-            mesh.material.uniformsNeedUpdate = true;
-            console.log(`Texture and shader applied to ${mesh.name}`, isSun ? '(SUN - emissive)' : '');
-        },
-        undefined,
-        function (error) {
-            console.error(`Error loading texture for ${mesh.name}:`, error);
-        }
-    );
+
+    const texture = gl.createTexture();
+    const image = new Image();
+    image.src = texturePath;
+    image.onload = () => {
+        gl.bindTexture(gl.TEXTURE_2D, texture);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+        gl.generateMipmap(gl.TEXTURE_2D);
+        texturesLoaded++;
+        console.log(`Texture loaded for ${parentName} from ${texturePath}`);
+    }
 }
 
 function getByParentPlanetMesh(planetName) {
     // Find and return the mesh for a specific planet by searching parent names
-    const searchName = planetName.toLowerCase();
-    
-    for (let mesh of meshGroups) {
-        const parentName = mesh.parent?.name?.toLowerCase() || '';
-        const meshName = mesh.name?.toLowerCase() || '';
-        
-        // Match the planet name in the parent name
-        if (parentName.includes(searchName) && !parentName.includes('beziercircle')) {
-            // Special case: for Saturn, exclude the ring mesh
-            if (searchName === 'saturn' && meshName.includes('ring')) {
-                continue;
-            }
-            return mesh;
-        }
-    }
     
     console.warn(`Planet mesh not found for: ${planetName}`);
     return null;
 }
 
 
-function render() {
-    renderer.render(scene, camera);
+function render(angle) {
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+    // Set rotation angle
+    gl.uniform1f(rotationAngleLocation, angle);
+    
+    if (vertices.length > 0) {
+        gl.drawArrays(gl.TRIANGLES, 0, vertices.length / 8);
+    }
 }
-
-renderer.setSize(window.innerWidth, window.innerHeight);
-renderer.setPixelRatio(window.devicePixelRatio);
-renderer.setClearColor(new THREE.Color(0x000000));
-
-document.body.appendChild(renderer.domElement);
 
 function animate() {
     time = Date.now() - startTime;
-    
-    // Rotate planets on their own axes (self-rotation)
-    const sun = scene.getObjectByName('sun');   
-    let sunWorldPosition = new THREE.Vector3();
-    if (sun) {
-        sun.rotation.y += 0.01 * animationSpeed; // Sun spinning on its axis
-        sun.getWorldPosition(sunWorldPosition);
-    }
-    
-    const earth = scene.getObjectByName('earth');
-    if (earth) {
-        earth.rotation.y += 0.02 * animationSpeed; // Earth spinning on its axis (faster rotation)
-        const earthOrbit = earth.parent.parent;
-        if (earthOrbit) {
-            earthOrbit.rotation.y += 0.005 * animationSpeed; // Earth orbiting the sun (slower orbit)
-        }
-    }
-    
-    const moon = scene.getObjectByName('moon');
-    if (moon) {
-        moon.rotation.y += 0.015 * animationSpeed; // Moon spinning on its axis
-        const moonOrbit = moon.parent.parent;
-        if (moonOrbit) {
-            moonOrbit.rotation.y += 0.03 * animationSpeed; // Moon orbiting the earth
-        }
-    }
-    
-    const mars = scene.getObjectByName('mars');
-    if (mars) {
-        mars.rotation.y += 0.01 * animationSpeed;
-        const marsOrbit = mars.parent.parent;
-        if (marsOrbit) {
-            marsOrbit.rotation.y += 0.004 * animationSpeed;
-        }
-    }
-    
-    const venus = scene.getObjectByName('venus');
-    if (venus) {
-        venus.rotation.y += 0.01 * animationSpeed;
-        const venusOrbit = venus.parent.parent;
-        if (venusOrbit) {
-            venusOrbit.rotation.y += 0.006 * animationSpeed;
-        }
-    }
-    
-    const jupiter = scene.getObjectByName('jupiter');
-    if (jupiter) {
-        jupiter.rotation.y += 0.01 * animationSpeed;
-        const jupiterOrbit = jupiter.parent.parent;
-        if (jupiterOrbit) {
-            jupiterOrbit.rotation.y += 0.003 * animationSpeed;
-        }
-    }
-    
-    const saturn = scene.getObjectByName('saturn');
-    if (saturn) {
-        saturn.rotation.y += 0.01 * animationSpeed;
-        const saturnOrbit = saturn.parent.parent;
-        if (saturnOrbit) {
-            saturnOrbit.rotation.y += 0.002 * animationSpeed;
-        }
-    }
-    
-    const uranus = scene.getObjectByName('uranus');
-    if (uranus) {
-        uranus.rotation.y += 0.01 * animationSpeed;
-        const uranusOrbit = uranus.parent.parent;
-        if (uranusOrbit) {
-            uranusOrbit.rotation.y += 0.0015 * animationSpeed;
-        }
-    }
-    
-    const neptune = scene.getObjectByName('neptune');
-    if (neptune) {
-        neptune.rotation.y += 0.01 * animationSpeed;
-        const neptuneOrbit = neptune.parent.parent;
-        if (neptuneOrbit) {
-            neptuneOrbit.rotation.y += 0.001 * animationSpeed;
-        }
-    }
-    
-    const pluto = scene.getObjectByName('pluto');
-    if (pluto) {
-        pluto.rotation.y += 0.01 * animationSpeed;
-        const plutoOrbit = pluto.parent.parent;
-        if (plutoOrbit) {
-            plutoOrbit.rotation.y += 0.0008 * animationSpeed;
-        }
-    }
-    
-    const mercury = scene.getObjectByName('mercury');
-    if (mercury) {
-        mercury.rotation.y += 0.01 * animationSpeed;
-        const mercuryOrbit = mercury.parent.parent.parent;
-        if (mercuryOrbit) {
-            mercuryOrbit.rotation.y += 0.008 * animationSpeed;
-        }
-    }
-    
-    render();
+    let angle = 1 * 0.001 * (time);
+    render(angle);
 }
 
 setInterval(animate, 50); // 20 FPS
 
 addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    // canvas.width = window.innerWidth;
+    // canvas.height = window.innerHeight;
+    gl.viewport(0, 0, canvas.width, canvas.height);
 })
 
 moveCameraSpeed = 0.3;
 cameraAngle = 90;
-cameraRadius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
+//cameraRadius = Math.sqrt(camera.position.x ** 2 + camera.position.z ** 2);
 
 addEventListener('keydown', (event) => {
     switch(event.key) {
@@ -314,12 +272,67 @@ addEventListener('keydown', (event) => {
         case 'c':
             checkerEnabled = checkerEnabled > 0.5 ? 0.0 : 1.0;
             // Update all mesh materials
-            meshGroups.forEach((mesh) => {
-                if (mesh.material && mesh.material.uniforms && mesh.material.uniforms.uCheckerEnabled) {
-                    mesh.material.uniforms.uCheckerEnabled.value = checkerEnabled;
-                }
-            });
             console.log('Checker pattern:', checkerEnabled > 0.5 ? 'ON' : 'OFF');
             break;
     }
 })
+
+
+function parseSTL(fileContent) {
+    console.log('Starting STL parse...');
+    const lines = fileContent.split('\n');
+    let vertices = [];
+
+    let currentNormal = [0, 0, 0];
+    let vertexCount = 0;
+
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        
+        const parts = line.split(/\s+/);
+        const firstword = parts[0];
+
+        switch(firstword){
+            case 'solid':
+                break;
+            case 'facet': // normal
+                if (parts[1] === 'normal') {
+                    currentNormal = [
+                        parseFloat(parts[2]),
+                        parseFloat(parts[3]),
+                        parseFloat(parts[4])
+                    ];
+                }
+                break;
+            case 'outer': // loop
+                break;
+            case 'vertex':
+                const x = parseFloat(parts[1]);
+                const y = parseFloat(parts[2]);
+                const z = parseFloat(parts[3]);
+                
+                // Calculate spherical UV coordinates
+                const len = Math.sqrt(x*x + y*y + z*z);
+                const u = 0.5 + Math.atan2(z, x) / (2 * Math.PI);
+                const v = 0.5 - Math.asin(y / len) / Math.PI;
+                
+                // Push: position (3), normal (3), texCoord (2)
+                vertices.push(x, y, z, currentNormal[0], currentNormal[1], currentNormal[2], u, v); 
+                vertexCount++;
+                
+                break;
+            case 'endloop':
+                break;
+            case 'endfacet':
+                break;
+            case 'endsolid':
+                break;
+            default:
+                console.warn('Unknown STL line start: ', firstword);
+                break;
+        }
+    }
+    console.log('STL parse complete, total vertices:', vertexCount);
+    return new Float32Array(vertices);
+}
