@@ -1,9 +1,10 @@
-function loadModel(stlFileUrl, name) {
+function loadModel(name) {
     console.log('Loading model:', name);
     let model= [];
     let arrayBuffer = gl.createBuffer();
+    let radius
 
-    fetch(stlFileUrl)
+    fetch(getModelUrl(name))
     .then(response => {
         console.log('Fetching STL...');
         return response.text();
@@ -16,8 +17,15 @@ function loadModel(stlFileUrl, name) {
             try {
                 vertices = parseSTL(fileContent, 1);
 
+                x = vertices[0] 
+                y = vertices[1]
+                z = vertices[2]
+
+                radius = Math.sqrt(x*x + y*y + z*z);
+
                 model.verticesCount = vertices.length / 8;
-                console.log('STL parsed, vertices:', vertices.length / 8);
+                model.radius = radius;
+                console.log('STL parsed, vertices:', vertices.length / 8, 'radius:', radius);
                 
                 // Update buffer after loading
                 gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
@@ -60,7 +68,7 @@ function loadModel(stlFileUrl, name) {
 
     const image = new Image();
     image.crossOrigin = "anonymous";
-    image.src = 'https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/textures/gltf_embedded_10.jpeg';
+    image.src = getTextureUrl(name);
     image.onload = () => {
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
@@ -83,6 +91,7 @@ function loadModel(stlFileUrl, name) {
     model.texture = texture;
     model.verticesCount = 0; // Will be set after loading
     model.position = {x: 0, y: 0, z: 0}; // Position offset
+    model.radius = radius
     model.orbitRotationSpeed = 0.0; // Orbit rotation angle
 
     return model
@@ -147,8 +156,8 @@ function parseSTL(fileContent) {
     return new Float32Array(vertices);
 }
 
-function getUrl(name) {
-    let texturePath = `https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/textures/gltf_embedded_${name}.`
+function getTextureUrl(name) {
+    let texturePath = `https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/textures/${name}.`
 
     if (name === 'saturn_ring') {
         texturePath += 'png';
@@ -156,4 +165,8 @@ function getUrl(name) {
         texturePath += 'jpeg';
     }
     return texturePath;
+}
+
+function getModelUrl(name) {
+    return `https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/stl/${name}.stl`;
 }

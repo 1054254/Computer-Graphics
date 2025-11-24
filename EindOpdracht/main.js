@@ -15,8 +15,8 @@ let planets = []; // Array to store planet data with orbit info
 let models = [];
 
 let canvas = document.createElement('canvas');
-canvas.width = 600;
-canvas.height = 600;
+canvas.width = 1000;
+canvas.height = 1000;
 document.body.appendChild(canvas);
 
 var gl = canvas.getContext("webgl2");
@@ -74,7 +74,7 @@ let projection = new Float32Array([1, 0, 0, 0,
 gl.uniformMatrix4fv(projectionLocation, false, projection); // Transpose field MUST be FALSE
 
 // Translation matrix; move everything 3 units to the back
-let scale = 0.1;
+let scale = 0.01;
 let translationLocation = gl.getUniformLocation(program, "translation");
 let translation = new Float32Array([scale, 0, 0, 0,
                                     0, scale, 0, 0,
@@ -92,78 +92,69 @@ let fixedRotation = new Float32Array([1,  0, 0, 0,
                                         0,  0, 0, 1]); // In column-major order
 gl.uniformMatrix4fv(fixedRotationLocation, false, fixedRotation); // Transpose field MUST be FALSE
 
-// Load the solar system model from github
-let stlFileUrl = 'https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/stl/Sun.stl';
-
-let sunModel = loadModel(stlFileUrl, 'Sun');
-let sunModel2 = loadModel(stlFileUrl, 'Sun2');
+let sunModel = loadModel('sun');
+let mercuryModel = loadModel('mercury');
+let venusModel = loadModel('venus');
+let earthModel = loadModel('earth');
+let marsModel = loadModel('mars');
+let jupiterModel = loadModel('jupiter');
+let saturnModel = loadModel('saturn');
+let saturnRingModel = loadModel('saturn_ring');
+let uranusModel = loadModel('uranus');
+let neptuneModel = loadModel('neptune');
+let moonModel = loadModel('moon');
 
 models.push(sunModel);
-models.push(sunModel2);
+models.push(mercuryModel);
+models.push(venusModel);
+models.push(earthModel);
+models.push(marsModel);
+models.push(jupiterModel);
+models.push(saturnModel);
+models.push(saturnRingModel);
+models.push(uranusModel);
+models.push(neptuneModel);
+models.push(moonModel);
 
-// Set initial positions for the second sun
-sunModel2.position.x = 15.0;
-sunModel2.orbitRotationSpeed = -2.0;
-
-
-function getTextureNumber(planetName) {
-    const searchName = planetName.toLowerCase();
+// number from https://courses.lumenlearning.com/suny-astronomy/chapter/physical-and-orbital-data-for-the-planets/
+// Wait for sun model to load, then set up orbit positions
+setTimeout(() => {
+    let sunRadius = 0.00465046726; // Sun radius in AU
+    let scaleOrbits = (sunModel.radius / sunRadius) / 100; // Scale factor for orbit distances
     
-    if (searchName.includes('moon')) return 9;
-    if (searchName.includes('sun')) return 10;
-    if (searchName.includes('erath') || searchName.includes('earth')) return 2;
-    if (searchName.includes('mars')) return 3;
-    if (searchName.includes('venus')) return 1;
-    if (searchName.includes('jupiter')) return 4;
-    if (searchName.includes('saturn_ring')) return 6; // Check ring BEFORE saturn
-    if (searchName.includes('saturn')) return 5;
-    if (searchName.includes('uranus')) return 7;
-    if (searchName.includes('neptune')) return 8;
-    if (searchName.includes('pluto')) return 9;
-    if (searchName.includes('mercury')) return 0;
+    console.log('Sun radius:', sunModel.radius, 'Scale factor:', scaleOrbits);
     
-    console.warn('Unknown planet for texture number:', planetName);
-    return null;
-}
+    mercuryModel.position.x = 0.39 * scaleOrbits;
+    venusModel.position.x = 0.72 * scaleOrbits;
+    earthModel.position.x = 1.0 * scaleOrbits;
+    marsModel.position.x = 1.52 * scaleOrbits;
+    jupiterModel.position.x = 5.2 * scaleOrbits;
+    saturnModel.position.x = 9.54 * scaleOrbits;
+    saturnRingModel.position.x = 9.54 * scaleOrbits;
+    uranusModel.position.x = 19.19 * scaleOrbits;
+    neptuneModel.position.x = 30.06 * scaleOrbits;
+    
+    // Set orbit speeds (relative to Earth = 1)
+    mercuryModel.orbitRotationSpeed = 1/ 0.24; // Mercury orbits faster
+    venusModel.orbitRotationSpeed = 1/ 0.6;
+    earthModel.orbitRotationSpeed = 1.0;
+    marsModel.orbitRotationSpeed = 1/ 1.88;
+    jupiterModel.orbitRotationSpeed = 1/ 11.86;
+    saturnModel.orbitRotationSpeed = 1/ 29.46;
+    saturnRingModel.orbitRotationSpeed = 1/ 29.46;
+    uranusModel.orbitRotationSpeed = 1/ 84.01;
+    neptuneModel.orbitRotationSpeed = 1/ 164.82;
 
-function setTexture(mesh) {
-    const parentName = mesh.parent?.name?.toLowerCase() || '';
-    const fileNumber = getTextureNumber(parentName);
-    
-    if (fileNumber === null) {
-        console.warn('Unknown parent for mesh:', mesh.name, 'Parent:', parentName);
-        return;
-    }
-    
-    // Check if this is the sun
-    const isSun = parentName.includes('sun');
-    
-    let texturePath = `https://1054254.github.io/Computer-Graphics/EindOpdracht/solar-system/textures/gltf_embedded_${fileNumber}.`
-
-    if (fileNumber === 6) {
-        texturePath += 'png';
-    } else {
-        texturePath += 'jpeg';
-    }
-
-    const texture = gl.createTexture();
-    const image = new Image();
-    image.src = texturePath;
-    image.onload = () => {
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-        gl.generateMipmap(gl.TEXTURE_2D);
-        texturesLoaded++;
-        console.log(`Texture loaded for ${parentName} from ${texturePath}`);
-    }
-}
-
-function getByParentPlanetMesh(planetName) {
-    // Find and return the mesh for a specific planet by searching parent names
-    
-    console.warn(`Planet mesh not found for: ${planetName}`);
-    return null;
-}
+    // Set planet rotation speeds where 1 is one a day on earth
+    mercuryModel.planetRotationspeed = 58
+    venusModel.planetRotationspeed = -243
+    earthModel.planetRotationspeed = 1
+    marsModel.planetRotationspeed = 1.026
+    jupiterModel.planetRotationspeed = 0.414
+    saturnModel.planetRotationspeed = 0.440
+    uranusModel.planetRotationspeed = -0.718
+    neptuneModel.planetRotationspeed = 0.671
+}, 500); // Wait 500ms for sun to load
 
 
 function render(angle) {
@@ -171,8 +162,8 @@ function render(angle) {
 
     // Set rotation angle
     models.forEach(model => {
-        let planetRotation = gl.getUniformLocation(program, "planetRotation");
-        gl.uniform1f(planetRotation, angle);
+        let planetRotationspeed = gl.getUniformLocation(program, "planetRotationspeed");
+        gl.uniform1f(planetRotationspeed, angle);
 
         // Set position offset
         let posOffsetLoc = gl.getUniformLocation(program, "uPositionOffset");

@@ -6,7 +6,7 @@ function vertexShader() {
     uniform mat4 projection;
     uniform mat4 translation;
     uniform mat4 fixedRotation;
-    uniform float planetRotation;
+    uniform float planetRotationspeed;
     uniform float orbitRotation;
     uniform vec3 uPositionOffset;
     out vec3 vNormal;
@@ -17,7 +17,7 @@ function vertexShader() {
     mat4 calculatRotation(float angle);
     
     void main() {
-        mat4 rotation = calculatRotation(planetRotation);
+        mat4 rotation = calculatRotation(planetRotationspeed);
         mat4 orbitRotationMatrix = calculatRotation(orbitRotation);
 
         vNormal = aNormal;
