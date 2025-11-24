@@ -12,32 +12,36 @@ function vertexShader() {
     out vec3 vNormal;
     out vec3 vPos;
     out vec2 vTexCoord;
-
-
-    mat4 calculatRotation(float angle);
+    
+    mat4 calculateRotation(float angle) {
+        float s = sin(angle);
+        float c = cos(angle);
+        return mat4(c, 0, -s, 0,
+                    0, 1,  0, 0,
+                    s, 0,  c, 0,
+                    0, 0,  0, 1);
+    }
     
     void main() {
-        mat4 rotation = calculatRotation(planetRotation);
-        mat4 orbitRotationMatrix = calculatRotation(orbitRotation);
+        mat4 rotation = calculateRotation(planetRotation);
+        mat4 orbitRotationMatrix = calculateRotation(orbitRotation);
 
         vNormal = aNormal;
         vPos = aPos;
         vTexCoord = aTexCoord;
         
-        // Apply position offset after rotation
+        // Rotate planet on its own axis
         vec4 rotatedPos = rotation * vec4(aPos, 1.0);
-        vec4 offsetPos = rotatedPos + vec4(uPositionOffset, 0.0);
-        vec4 orbitPos = offsetPos * orbitRotationMatrix;
-        gl_Position = projection * translation * fixedRotation * orbitPos;
+        
+        // Rotate the offset position around origin for orbit
+        vec3 orbitedOffset = (orbitRotationMatrix * vec4(uPositionOffset, 0.0)).xyz;
+        
+        // Add orbited offset to rotated planet
+        vec4 finalPos = rotatedPos + vec4(orbitedOffset, 0.0);
+        
+        gl_Position = projection * translation * fixedRotation * finalPos;
     }
-    mat4 calculatRotation(float angle) {
-    float s = sin(angle);
-    float c = cos(angle);
-    return mat4(c, 0, -s, 0,
-                0, 1,  0, 0,
-                s, 0,  c, 0,
-                0, 0,  0, 1);
-    }`;
+`;
 }
 
 function fragmentShader() {
