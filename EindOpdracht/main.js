@@ -231,5 +231,48 @@ addEventListener('keydown', (event) => {
             break;
     }
 })
+    
+function rotateX(angle) {
+    return [
+        [1, 0, 0, 0],
+        [0, Math.cos(angle), -Math.sin(angle), 0],
+        [0, Math.sin(angle), Math.cos(angle), 0],
+        [0, 0, 0, 1]
+    ]
+}
 
+function rotateY(angle) {
+    return [
+        [Math.cos(angle), 0, Math.sin(angle), 0],
+        [0, 1, 0, 0],
+        [-Math.sin(angle), 0, Math.cos(angle), 0],
+        [0, 0, 0, 1]
+    ]
+}
 
+function rotateZ(angle) {
+    return [
+        [Math.cos(angle), -Math.sin(angle), 0, 0],
+        [Math.sin(angle), Math.cos(angle), 0, 0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]
+    ]
+}
+
+function translation(x, y, z) {
+    return [
+        [1, 0, 0, x],
+        [0, 1, 0, y],
+        [0, 0, 1, z],
+        [0, 0, 0, 1]
+    ]
+}
+
+function scale(x, y, z) {
+    return [
+        [x, 0, 0, 0],
+        [0, y, 0, 0],
+        [0, 0, z, 0],
+        [0, 0, 0, 1]
+    ]
+}
