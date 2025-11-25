@@ -94,7 +94,7 @@ models.push(moonModel);
 // Wait for sun model to load, then set up orbit positions
 setTimeout(() => {
     let sunRadius = 0.00465046726; // Sun radius in AU
-    let scaleOrbits = (sunModel.radius / sunRadius) / 10; // Scale factor for orbit distances
+    let scaleOrbits = (sunModel.radius / sunRadius) / 100; // Scale factor for orbit distances
     
     console.log('Sun radius:', sunModel.radius, 'Scale factor:', scaleOrbits);
     
@@ -128,6 +128,7 @@ setTimeout(() => {
     marsModel.planetRotationspeed = 1.026
     jupiterModel.planetRotationspeed = 0.414
     saturnModel.planetRotationspeed = 0.440
+    saturnRingModel.planetRotationspeed = 0.440
     uranusModel.planetRotationspeed = -0.718
     neptuneModel.planetRotationspeed = 0.671
 }, 500); // Wait 500ms for sun to load
@@ -235,6 +236,16 @@ addEventListener('keydown', (event) => {
             checkerEnabled = checkerEnabled > 0.5 ? 0.0 : 1.0;
             // Update all mesh materials
             console.log('Checker pattern:', checkerEnabled > 0.5 ? 'ON' : 'OFF');
+            break;
+        case 'W':
+        case 'w':
+            scaleValue += 0.01;
+            scaleMatrix = scale(scaleValue, scaleValue, scaleValue);
+            break;
+        case 'S':
+        case 's':
+            scaleValue = Math.max(0.01, scaleValue - 0.01);
+            scaleMatrix = scale(scaleValue, scaleValue, scaleValue);
             break;
     }
 })
