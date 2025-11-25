@@ -102,11 +102,15 @@ var globaly2 = 50
 var rotatex = 100
 var rotatey = 100
 
+canvasXCenter = c.getBoundingClientRect().width/2
+canvasYCenter = c.getBoundingClientRect().height/2
+
 setInterval(() => {
     ctx.clearRect(0,0,640,480); // clear all
     rotateRect(4);
     drawRectangle2Point(globalx1,globaly1,globalx2,globaly2,globalColour)
-    drawCircle(c.getBoundingClientRect().width/2,c.getBoundingClientRect().height/2,30,globalColour)  
+    drawCircle(canvasXCenter,canvasYCenter,30,globalColour)
+    drawTriangle(canvasXCenter + 10,canvasYCenter + 50, canvasXCenter + 100,canvasYCenter - 50, canvasXCenter + 110,canvasYCenter + 50, globalColour)
 }, 50);
 
 
