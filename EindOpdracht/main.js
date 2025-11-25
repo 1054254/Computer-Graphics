@@ -1,5 +1,5 @@
 // "Solar system" (https://skfb.ly/oKYnC) by dannzjs is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
-let animationSpeed = 5; // speed of animtion
+let animationSpeed = 1; // speed of animtion
 let intensity = 1.0; // Initial intensity
 let vecLightPos = {x: 2.0, y: 2.0, z: 2.0};
 let time = 0;
@@ -65,32 +65,6 @@ gl.uniform1f(uIntensityLoc, 0.5);
 let uLightPosLoc = gl.getUniformLocation(program, "uLightPos");
 gl.uniform3f(uLightPosLoc, vecLightPos.x, vecLightPos.y, vecLightPos.z);
 
-// Perspective projection matrix
-let projectionLocation = gl.getUniformLocation(program, "projection");
-let projection = new Float32Array([1, 0, 0, 0,
-                                    0, 1, 0, 0,
-                                    0, 0, -1, -1,
-                                    0, 0, -1, 0]); // In column-major order
-gl.uniformMatrix4fv(projectionLocation, false, projection); // Transpose field MUST be FALSE
-
-// Translation matrix; move everything 3 units to the back
-let scale = 0.01;
-let translationLocation = gl.getUniformLocation(program, "translation");
-let translation = new Float32Array([scale, 0, 0, 0,
-                                    0, scale, 0, 0,
-                                    0, 0, scale, 0,
-                                    0, 0, -3, 1]); // In column-major order
-gl.uniformMatrix4fv(translationLocation, false, translation); // Transpose field MUST be FALSE
-
-// Fixed rotation matrix; rotate 30° around x-axis
-let fixedRotationLocation = gl.getUniformLocation(program, "fixedRotation");
-let c = Math.cos(Math.PI / 6);
-let s = Math.sin(Math.PI / 6);
-let fixedRotation = new Float32Array([1,  0, 0, 0,
-                                        0,  c, s, 0,
-                                        0, -s, c, 0,
-                                        0,  0, 0, 1]); // In column-major order
-gl.uniformMatrix4fv(fixedRotationLocation, false, fixedRotation); // Transpose field MUST be FALSE
 
 let sunModel = loadModel('sun');
 let mercuryModel = loadModel('mercury');
@@ -120,7 +94,7 @@ models.push(moonModel);
 // Wait for sun model to load, then set up orbit positions
 setTimeout(() => {
     let sunRadius = 0.00465046726; // Sun radius in AU
-    let scaleOrbits = (sunModel.radius / sunRadius) / 100; // Scale factor for orbit distances
+    let scaleOrbits = (sunModel.radius / sunRadius) / 10; // Scale factor for orbit distances
     
     console.log('Sun radius:', sunModel.radius, 'Scale factor:', scaleOrbits);
     
@@ -135,6 +109,7 @@ setTimeout(() => {
     neptuneModel.position.x = 30.06 * scaleOrbits;
     
     // Set orbit speeds (relative to Earth = 1)
+    sunModel.orbitRotationSpeed = 0.0; // Sun doesn't orbit
     mercuryModel.orbitRotationSpeed = 1/ 0.24; // Mercury orbits faster
     venusModel.orbitRotationSpeed = 1/ 0.6;
     earthModel.orbitRotationSpeed = 1.0;
@@ -146,6 +121,7 @@ setTimeout(() => {
     neptuneModel.orbitRotationSpeed = 1/ 164.82;
 
     // Set planet rotation speeds where 1 is one a day on earth
+    sunModel.planetRotationspeed = 25.4; // Sun rotates about once per 25.4 days
     mercuryModel.planetRotationspeed = 58
     venusModel.planetRotationspeed = -243
     earthModel.planetRotationspeed = 1
@@ -157,22 +133,55 @@ setTimeout(() => {
 }, 500); // Wait 500ms for sun to load
 
 
+// Create individual transformation matrices
+let projection = new Float32Array([1, 0, 0, 0,
+                                    0, 1, 0, 0,
+                                    0, 0, -1, -1,
+                                    0, 0, -1, 0]); // Perspective projection
+
+let fixedRotation = rotateX(Math.PI / 6); // Rotate 30° around x-axis
+
+let scaleValue = 0.1;
+let scaleMatrix = scale(scaleValue, scaleValue, scaleValue);
+
+let translationMatrix = translation(0, 0, -3); // Move 3 units back
+
+// Combine all static transformations: projection * translation * fixedRotation * scale
+let baseTransform = multiplyMatrices(projection, translationMatrix);
+baseTransform = multiplyMatrices(baseTransform, fixedRotation);
+baseTransform = multiplyMatrices(baseTransform, scaleMatrix);
+
+// Get uniform location for the combined matrix
+let transformLocation = gl.getUniformLocation(program, "uTransform");
+
+
 function render(angle) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-
-    // Set rotation angle
+    
+    // Render each model
     models.forEach(model => {
-        let planetRotationspeed = gl.getUniformLocation(program, "planetRotationspeed");
-        gl.uniform1f(planetRotationspeed, angle);
-
-        // Set position offset
-        let posOffsetLoc = gl.getUniformLocation(program, "uPositionOffset");
-        gl.uniform3f(posOffsetLoc, model.position.x, model.position.y, model.position.z);
-
-        let orbitRotationLoc = gl.getUniformLocation(program, "orbitRotation");
-        gl.uniform1f(orbitRotationLoc, model.orbitRotationSpeed * angle); // Example orbit speed
-
         if (model.verticesCount > 0) {
+            // Calculate model-specific transformations
+            let planetRotation = rotateY(model.planetRotationspeed * angle);
+            let orbitRotationAngle = model.orbitRotationSpeed * angle;
+            let orbitRotation = rotateY(orbitRotationAngle);
+            
+            // Create translation for orbit position
+            let orbitPosition = translation(model.position.x, model.position.y, model.position.z);
+            
+            // Combine transformations in correct order: scale * planetRotation * orbitPosition * orbitRotation
+            let temp = multiplyMatrices(scaleMatrix, planetRotation);
+            temp = multiplyMatrices(temp, orbitPosition);
+            temp = multiplyMatrices(temp, orbitRotation);
+            
+            // Apply view transformations: projection * translation * fixedRotation * model
+            let finalTransform = multiplyMatrices(projection, translationMatrix);
+            finalTransform = multiplyMatrices(finalTransform, fixedRotation);
+            finalTransform = multiplyMatrices(finalTransform, temp);
+            
+            // Send final combined matrix to shader
+            gl.uniformMatrix4fv(transformLocation, false, finalTransform);
+
             // Bind the model's buffer and texture before drawing
             gl.bindBuffer(gl.ARRAY_BUFFER, model.buffer);
             
@@ -193,17 +202,15 @@ function render(angle) {
             gl.drawArrays(gl.TRIANGLES, 0, model.verticesCount);
         }
     });
-    
-    
 }
 
 function animate() {
     time = Date.now() - startTime;
-    let angle = 1 * 0.001 * (time);
+    let angle = animationSpeed * 0.00001 * (time);
     render(angle);
 }
 
-setInterval(animate, 50); // 20 FPS
+setInterval(animate, 5); 
 
 addEventListener('resize', () => {
     // canvas.width = window.innerWidth;
@@ -233,46 +240,65 @@ addEventListener('keydown', (event) => {
 })
     
 function rotateX(angle) {
-    return [
-        [1, 0, 0, 0],
-        [0, Math.cos(angle), -Math.sin(angle), 0],
-        [0, Math.sin(angle), Math.cos(angle), 0],
-        [0, 0, 0, 1]
-    ]
+    let c = Math.cos(angle);
+    let s = Math.sin(angle);
+    return new Float32Array([
+        1,  0, 0, 0,
+        0,  c, s, 0,
+        0, -s, c, 0,
+        0,  0, 0, 1
+    ]);
 }
 
 function rotateY(angle) {
-    return [
-        [Math.cos(angle), 0, Math.sin(angle), 0],
-        [0, 1, 0, 0],
-        [-Math.sin(angle), 0, Math.cos(angle), 0],
-        [0, 0, 0, 1]
-    ]
+    let c = Math.cos(angle);
+    let s = Math.sin(angle);
+    return new Float32Array([
+        c, 0, s, 0,
+        0, 1, 0, 0,
+       -s, 0, c, 0,
+        0, 0, 0, 1
+    ]);
 }
 
 function rotateZ(angle) {
-    return [
-        [Math.cos(angle), -Math.sin(angle), 0, 0],
-        [Math.sin(angle), Math.cos(angle), 0, 0],
-        [0, 0, 1, 0],
-        [0, 0, 0, 1]
-    ]
+    let c = Math.cos(angle);
+    let s = Math.sin(angle);
+    return new Float32Array([
+        c, -s, 0, 0,
+        s,  c, 0, 0,
+        0,  0, 1, 0,
+        0,  0, 0, 1
+    ]);
 }
 
 function translation(x, y, z) {
-    return [
-        [1, 0, 0, x],
-        [0, 1, 0, y],
-        [0, 0, 1, z],
-        [0, 0, 0, 1]
-    ]
+    return new Float32Array([
+        1, 0, 0, 0,
+        0, 1, 0, 0,
+        0, 0, 1, 0,
+        x, y, z, 1
+    ]);
 }
 
 function scale(x, y, z) {
-    return [
-        [x, 0, 0, 0],
-        [0, y, 0, 0],
-        [0, 0, z, 0],
-        [0, 0, 0, 1]
-    ]
+    return new Float32Array([
+        x, 0, 0, 0,
+        0, y, 0, 0,
+        0, 0, z, 0,
+        0, 0, 0, 1
+    ]);
+}
+
+function multiplyMatrices(a, b) {
+    let result = new Float32Array(16);
+    for (let row = 0; row < 4; row++) {
+        for (let col = 0; col < 4; col++) {
+            result[col * 4 + row] = 0;
+            for (let i = 0; i < 4; i++) {
+                result[col * 4 + row] += a[i * 4 + row] * b[col * 4 + i];
+            }
+        }
+    }
+    return result;
 }
