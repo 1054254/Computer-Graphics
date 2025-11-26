@@ -91,6 +91,7 @@ function loadModel(name) {
     model.texture = texture;
     model.verticesCount = 0; // Will be set after loading
     model.position = {x: 0, y: 0, z: 0}; // Position offset
+    model.orbitRadius = 0.0; // Orbit radius
     model.radius = radius
     model.orbitRotationSpeed = 0.0; // Orbit rotation speed
     model.planetRotationspeed = 1.0; // Planet rotation speed (default 1 day)
