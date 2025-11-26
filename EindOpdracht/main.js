@@ -182,7 +182,7 @@
 
                     let temp = multiplyMatrices(parentOrbitPostion, parentOrbitRotation);
 
-                    orbitPosition = multiplyMatrices(temp, translation(model.orbitRadius + model.position.x, 0, model.position.z));       
+                    orbitPosition = multiplyMatrices(temp, translation(model.orbitRadius, 0, 0));       
                 }            
                 // Combine transformations in correct order: scale * planetRotation * orbitPosition * orbitRotation
                 let temp = multiplyMatrices(scaleMatrix, planetRotation);
