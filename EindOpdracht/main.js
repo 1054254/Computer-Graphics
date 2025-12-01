@@ -4,6 +4,8 @@
     let vecLightPos = {x: 2.0, y: 2.0, z: 2.0};
     let time = 0;
     let checkerEnabled = 0.0; // Toggle for checker pattern
+    let near = 0.1, far = 100.0, FovInDegree = 90, aspectRatio = 1.0;
+    let projection, fixedRotation, scaleMatrix, translationMatrix;
 
 
     let textures = [];
@@ -15,8 +17,6 @@
     let models = [];
 
     let canvas = document.createElement('canvas');
-    canvas.width = 1000;
-    canvas.height = 1000;
     document.body.appendChild(canvas);
 
     var gl = canvas.getContext("webgl2");
@@ -25,7 +25,7 @@
         throw new Error('WebGL2 not supported');
     }
 
-    gl.viewport(0, 0, canvas.width, canvas.height);
+    setScreenSizeToMax();
     gl.enable(gl.DEPTH_TEST);
     gl.clearColor(0.1, 0.1, 0.1, 1.0);
 
@@ -94,7 +94,7 @@
     // Wait for sun model to load, then set up orbit positions
     setTimeout(() => {
         let sunRadius = 0.00465046726; // Sun radius in AU
-        let scaleOrbits = (sunModel.radius / sunRadius) / 100; // Scale factor for orbit distances
+        let scaleOrbits = (sunModel.radius / sunRadius); // Scale factor for orbit distances
         
         console.log('Sun radius:', sunModel.radius, 'Scale factor:', scaleOrbits);
         
@@ -140,17 +140,12 @@
 
 
     // Create individual transformation matrices
-    let projection = new Float32Array([1, 0, 0, 0,
-                                        0, 1, 0, 0,
-                                        0, 0, -1, -1,
-                                        0, 0, -1, 0]); // Perspective projection
-
-    let fixedRotation = rotateX(Math.PI / 6); // Rotate 30° around x-axis
+    fixedRotation = rotateX(Math.PI / 6); // Rotate 30° around x-axis
 
     let scaleValue = 0.1;
-    let scaleMatrix = scale(scaleValue, scaleValue, scaleValue);
+    scaleMatrix = scale(scaleValue, scaleValue, scaleValue);
 
-    let translationMatrix = translation(0, 0, -3); // Move 3 units back
+    translationMatrix = translation(0, 0, -3); // Move 3 units back
 
     // Combine all static transformations: projection * translation * fixedRotation * scale
     let baseTransform = multiplyMatrices(projection, translationMatrix);
@@ -228,13 +223,11 @@
     setInterval(animate, 5); 
 
     addEventListener('resize', () => {
-        // canvas.width = window.innerWidth;
-        // canvas.height = window.innerHeight;
-        gl.viewport(0, 0, canvas.width, canvas.height);
+        setScreenSizeToMax();
     })
 
     moveCameraSpeed = 0.3;
-    cameraAngle = 90;
+
     //cameraRadius = Math.sqrt(camera.orbitRadius ** 2 + camera.position.z ** 2);
 
     addEventListener('keydown', (event) => {
@@ -253,13 +246,15 @@
                 break;
             case 'W':
             case 'w':
-                scaleValue += 0.01;
-                scaleMatrix = scale(scaleValue, scaleValue, scaleValue);
+                // near += moveCameraSpeed;
+                // far = Math.max(near + moveCameraSpeed, far - moveCameraSpeed);
+                // projection = perspective(FovInDegree * Math.PI / 180, aspectRatio, near, far);
                 break;
             case 'S':
             case 's':
-                scaleValue = Math.max(0.01, scaleValue - 0.01);
-                scaleMatrix = scale(scaleValue, scaleValue, scaleValue);
+                // near = Math.max(moveCameraSpeed, near - moveCameraSpeed);
+                // far += 0.1;
+                // projection = perspective(FovInDegree * Math.PI / 180, aspectRatio, near, far);
                 break;
         }
     })
@@ -326,4 +321,26 @@
             }
         }
         return result;
+    }   
+
+    // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_model_view_projection#perspective_projection_matrix
+    function perspective(fieldOfViewInRadians, aspectRatio, near, far) {
+    const f = 1.0 / Math.tan(fieldOfViewInRadians / 2);
+    const rangeInv = 1 / (near - far);
+
+    // prettier-ignore
+        return [
+            f / aspectRatio, 0, 0, 0,
+            0, f, 0, 0,
+            0, 0, (near + far) * rangeInv, -1,
+            0, 0, near * far * rangeInv * 2, 0,
+        ];
+    }
+
+    function setScreenSizeToMax(){
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        aspectRatio = canvas.width / canvas.height;
+        projection = perspective(FovInDegree * Math.PI / 180, aspectRatio, near, far);
+        gl.viewport(0, 0, canvas.width, canvas.height);
     }
