@@ -7,11 +7,7 @@
     let near = 0.1, far = 100.0, FovInDegree = 90, aspectRatio = 1.0;
     let projection, fixedRotation, scaleMatrix, translationMatrix;
 
-
-    let textures = [];
-    let texturesLoaded = 0;
     let startTime = Date.now();
-    let planets = []; // Array to store planet data with orbit info
 
     // Array to store multiple models
     let models = [];
