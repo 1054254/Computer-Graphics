@@ -2,12 +2,10 @@
     let animationSpeed = 1; // speed of animtion
     let intensity = 1.0; // Initial intensity
     let vecLightPos = {x: 2.0, y: 2.0, z: 2.0};
-    let time = 0;
+    let time = 0, startTime = Date.now();
     let checkerEnabled = 0.0; // Toggle for checker pattern
     let near = 0.1, far = 100.0, FovInDegree = 90, aspectRatio = 1.0;
     let projection, fixedRotation, scaleMatrix, translationMatrix;
-
-    let startTime = Date.now();
 
     // Array to store multiple models
     let models = [];
