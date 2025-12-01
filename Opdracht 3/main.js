@@ -67,16 +67,18 @@
     }
     
     
+    let scaleMatrix = scale(100, 100, 100);
+    let rotXMatrix = rotateX(30 * Math.PI / 180); // Fixed rotation of 30 degrees around x-axis
+    let transMatrix = translation(500, 250, 5)
+     
+
     function draw() {
         let angle = rotateSpeed * 0.001 * (Date.now() - startTime)
 
         ctx.clearRect(0, 0, canvas.width, canvas.height)
 
         // Maak transformatiematrix
-        let scaleMatrix = scale(100, 100, 100)
-        let rotXMatrix = rotateX(angle)
-        let rotYMatrix = rotateY(angle * 0.7)
-        let transMatrix = translation(500, 250, 5)
+        let rotYMatrix = rotateY(angle * 1.5)
 
         // Combineer alle matrices
         let transform = math.multiply(transMatrix, rotYMatrix, rotXMatrix, scaleMatrix)
