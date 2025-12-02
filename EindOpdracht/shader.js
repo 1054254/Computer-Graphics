@@ -24,21 +24,26 @@ function fragmentShader() {
     in vec3 vNormal;
     in vec3 vPos;
     in vec2 vTexCoord;
+    uniform vec3 uLightPos;
     uniform sampler2D uTexture;
+    uniform bool isSun;
     out vec4 fragColor;
     void main() {
         // Simple directional lighting
-        vec3 lightDir = normalize(vec3(0.5, 0.5, 1.0));
+        vec3 lightDir = normalize(uLightPos);
         vec3 normal = normalize(vNormal);
         float diff = max(dot(normal, lightDir), 0.0);
         
         // Sample texture
         vec3 texColor = texture(uTexture, vTexCoord).rgb;
         
+        vec3 ambient = 0.7 * texColor;
         // Ambient + diffuse lighting
-        vec3 ambient = 0.3 * texColor;
+        if (isSun) {
+            ambient *= 2.0;
+        }
         vec3 diffuse = diff * texColor;
-        
-        fragColor = vec4(ambient + diffuse, 1.0);
+        vec3 light = ambient + diffuse;
+        fragColor = vec4(light, 1.0);
     }`;
 }

@@ -15,7 +15,7 @@ function loadModel(name) {
         // Use setTimeout to allow UI to update
         setTimeout(() => {
             try {
-                vertices = parseSTL(fileContent, 1);
+                vertices = parseSTL(fileContent, name);
 
                 x = vertices[0] 
                 y = vertices[1]
@@ -56,10 +56,6 @@ function loadModel(name) {
         console.error('Error loading STL:', error);
     });
 
-    var planetRotation = gl.getUniformLocation(program, "planetRotation");
-    var orbitRadius = gl.getUniformLocation(program, "orbitRadius");
-    var orbitSpeed = gl.getUniformLocation(program, "orbitSpeed");
-
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
 
@@ -99,13 +95,39 @@ function loadModel(name) {
     return model
 }
 
-function parseSTL(fileContent) {
+function parseSTL(fileContent, modelName) {
     console.log('Starting STL parse...');
     const lines = fileContent.split('\n');
     let vertices = [];
 
     let currentNormal = [0, 0, 0];
     let vertexCount = 0;
+    
+    // For Saturn ring analysis
+    let ringAnalysis = null;
+
+    // First pass: collect all vertices for ring analysis
+    if (modelName === 'saturn_ring') {
+        let ringVertices = [];
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i].trim();
+            if (!line) continue;
+            
+            const parts = line.split(/\s+/);
+            if (parts[0] === 'vertex') {
+                const x = parseFloat(parts[1]);
+                const y = parseFloat(parts[2]);
+                const z = parseFloat(parts[3]);
+                ringVertices.push({x, y, z});
+            }
+        }
+        
+        // Analyze ring geometry to find plane and radii
+        ringAnalysis = analyzeRingGeometry(ringVertices);
+        console.log('Ring analysis:', ringAnalysis);
+        console.log('Total ring vertices:', ringVertices.length);
+    }
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i].trim();
@@ -133,10 +155,26 @@ function parseSTL(fileContent) {
                 const y = parseFloat(parts[2]);
                 const z = parseFloat(parts[3]);
                 
-                // Calculate spherical UV coordinates
-                const len = Math.sqrt(x*x + y*y + z*z);
-                const u = 0.5 + Math.atan2(z, x) / (2 * Math.PI);
-                const v = 0.5 - Math.asin(y / len) / Math.PI;
+                let u, v;
+                
+                if (modelName === 'saturn_ring' && ringAnalysis) {
+                    // Use the analyzed ring properties
+                    const radius = getRingRadius(x, y, z, ringAnalysis.plane);
+                    const angle = getRingAngle(x, y, z, ringAnalysis.plane);
+                    
+                    // For Saturn ring texture: U = radial distance, V = angular position
+                    // This matches typical ring texture layout where bands go horizontally
+                    u = (radius - ringAnalysis.innerRadius) / (ringAnalysis.outerRadius - ringAnalysis.innerRadius);
+                    u = Math.max(0, Math.min(1, u)); // Clamp to 0-1
+                    
+                    // V wraps around the ring
+                    v = (angle + Math.PI) / (2 * Math.PI);
+                } else {
+                    // Calculate spherical UV coordinates for planets
+                    const len = Math.sqrt(x*x + y*y + z*z);
+                    u = 0.5 + Math.atan2(z, x) / (2 * Math.PI);
+                    v = 0.5 - Math.asin(y / len) / Math.PI;
+                }
                 
                 // Push: position (3), normal (3), texCoord (2)
                 vertices.push(x, y, z, currentNormal[0], currentNormal[1], currentNormal[2], u, v); 
@@ -156,6 +194,69 @@ function parseSTL(fileContent) {
     }
     console.log('STL parse complete, total vertices:', vertexCount);
     return new Float32Array(vertices);
+}
+
+function analyzeRingGeometry(vertices) {
+    // Calculate bounding box
+    let minX = Infinity, maxX = -Infinity;
+    let minY = Infinity, maxY = -Infinity;
+    let minZ = Infinity, maxZ = -Infinity;
+    
+    vertices.forEach(v => {
+        minX = Math.min(minX, v.x); maxX = Math.max(maxX, v.x);
+        minY = Math.min(minY, v.y); maxY = Math.max(maxY, v.y);
+        minZ = Math.min(minZ, v.z); maxZ = Math.max(maxZ, v.z);
+    });
+    
+    // Determine which axis has the smallest range (ring's thickness direction)
+    const xRange = maxX - minX;
+    const yRange = maxY - minY;
+    const zRange = maxZ - minZ;
+    
+    let plane;
+    if (xRange < yRange && xRange < zRange) {
+        plane = 'yz'; // Ring is in YZ plane, X is thickness
+    } else if (yRange < xRange && yRange < zRange) {
+        plane = 'xz'; // Ring is in XZ plane, Y is thickness
+    } else {
+        plane = 'xy'; // Ring is in XY plane, Z is thickness
+    }
+    
+    // Find inner and outer radius based on the determined plane
+    let radii = [];
+    vertices.forEach(v => {
+        const radius = getRingRadius(v.x, v.y, v.z, plane);
+        radii.push(radius);
+    });
+    
+    radii.sort((a, b) => a - b);
+    const innerRadius = radii[Math.floor(radii.length * 0.1)]; // 10th percentile
+    const outerRadius = radii[Math.floor(radii.length * 0.9)]; // 90th percentile
+    
+    return {
+        plane: plane,
+        innerRadius: innerRadius,
+        outerRadius: outerRadius,
+        bounds: {minX, maxX, minY, maxY, minZ, maxZ}
+    };
+}
+
+function getRingRadius(x, y, z, plane) {
+    switch(plane) {
+        case 'xy': return Math.sqrt(x*x + y*y);
+        case 'xz': return Math.sqrt(x*x + z*z);
+        case 'yz': return Math.sqrt(y*y + z*z);
+        default: return Math.sqrt(x*x + z*z);
+    }
+}
+
+function getRingAngle(x, y, z, plane) {
+    switch(plane) {
+        case 'xy': return Math.atan2(y, x);
+        case 'xz': return Math.atan2(z, x);
+        case 'yz': return Math.atan2(z, y);
+        default: return Math.atan2(z, x);
+    }
 }
 
 function getTextureUrl(name) {

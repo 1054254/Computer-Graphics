@@ -1,11 +1,13 @@
     // "Solar system" (https://skfb.ly/oKYnC) by dannzjs is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
     let animationSpeed = 1; // speed of animtion
     let intensity = 1.0; // Initial intensity
-    let vecLightPos = {x: 2.0, y: 2.0, z: 2.0};
+    let vecLightPos = {x: 0.0, y: 0.0, z: 0.0};
     let time = 0, startTime = Date.now();
+    let accumulatedAngle = 0; // Track the total angle to avoid jumps
     let checkerEnabled = 0.0; // Toggle for checker pattern
     let near = 0.1, far = 100.0, FovInDegree = 90, aspectRatio = 1.0;
-    let projection, fixedRotation, scaleMatrix, translationMatrix;
+    let projection, fixedRotation, scaleMatrix, viewMatrix;
+    let cameraDistance = 3.0;
 
     // Array to store multiple models
     let models = [];
@@ -56,9 +58,6 @@
     let uIntensityLoc = gl.getUniformLocation(program, "uIntensity");
     gl.uniform1f(uIntensityLoc, 0.5);
 
-    let uLightPosLoc = gl.getUniformLocation(program, "uLightPos");
-    gl.uniform3f(uLightPosLoc, vecLightPos.x, vecLightPos.y, vecLightPos.z);
-
 
     let sunModel = loadModel('sun');
     let mercuryModel = loadModel('mercury');
@@ -71,6 +70,10 @@
     let uranusModel = loadModel('uranus');
     let neptuneModel = loadModel('neptune');
     let moonModel = loadModel('moon');
+
+    vecLightPos = sunModel.position;
+    let uLightPosLoc = gl.getUniformLocation(program, "uLightPos");
+    gl.uniform3f(uLightPosLoc, vecLightPos.x, vecLightPos.y, vecLightPos.z);
 
     models.push(sunModel);
     models.push(mercuryModel);
@@ -87,21 +90,7 @@
     // number from https://courses.lumenlearning.com/suny-astronomy/chapter/physical-and-orbital-data-for-the-planets/
     // Wait for sun model to load, then set up orbit positions
     setTimeout(() => {
-        let sunRadius = 0.00465046726; // Sun radius in AU
-        let scaleOrbits = (sunModel.radius / sunRadius); // Scale factor for orbit distances
-        
-        console.log('Sun radius:', sunModel.radius, 'Scale factor:', scaleOrbits);
-        
-        mercuryModel.orbitRadius = 0.39 * scaleOrbits;
-        venusModel.orbitRadius = 0.72 * scaleOrbits;
-        earthModel.orbitRadius = 1.0 * scaleOrbits;
-        marsModel.orbitRadius = 1.52 * scaleOrbits;
-        jupiterModel.orbitRadius = 5.2 * scaleOrbits;
-        saturnModel.orbitRadius = 9.54 * scaleOrbits;
-        uranusModel.orbitRadius = 19.19 * scaleOrbits;
-        neptuneModel.orbitRadius = 30.06 * scaleOrbits;
-        moonModel.orbitRadius = 0.00257 * scaleOrbits; // Moon relative to Earth
-        
+        orbitRealFakeChange(true);
         
         // Set orbit speeds (relative to Earth = 1)
         sunModel.orbitRotationSpeed = 0.0; // Sun doesn't orbit
@@ -149,6 +138,8 @@
     // Get uniform location for the combined matrix
     let transformLocation = gl.getUniformLocation(program, "uTransform");
 
+    let isSun = gl.getUniformLocation(program, "isSun");
+    gl.uniform1i(isSun, 0); // Set to true for sun
 
     function render(angle) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -177,14 +168,22 @@
                 let temp = multiplyMatrices(scaleMatrix, planetRotation);
                 temp = multiplyMatrices(temp, orbitPosition);
                 temp = multiplyMatrices(temp, orbitRotation);
+
+                viewMatrix = getViewMatrix(0, -cameraDistance);
                 
-                // Apply view transformations: projection * translation * fixedRotation * model
-                let finalTransform = multiplyMatrices(projection, translationMatrix);
+                // Apply view transformations: projection * viewMatix * fixedRotation * model
+                let finalTransform = multiplyMatrices(projection, viewMatrix);
                 finalTransform = multiplyMatrices(finalTransform, fixedRotation);
                 finalTransform = multiplyMatrices(finalTransform, temp);
                 
                 // Send final combined matrix to shader
                 gl.uniformMatrix4fv(transformLocation, false, finalTransform);
+
+                if (model.name === 'sun') {
+                    gl.uniform1i(isSun, 1); // Set to true for sun
+                } else {
+                    gl.uniform1i(isSun, 0); // Set to false for other planets
+                }
 
                 // Bind the model's buffer and texture before drawing
                 gl.bindBuffer(gl.ARRAY_BUFFER, model.buffer);
@@ -208,10 +207,17 @@
         });
     }
 
+    let lastTime = Date.now();
+    
     function animate() {
-        time = Date.now() - startTime;
-        let angle = animationSpeed * 0.00001 * (time);
-        render(angle);
+        let currentTime = Date.now();
+        let deltaTime = currentTime - lastTime;
+        lastTime = currentTime;
+        
+        // Accumulate angle based on delta time and current speed
+        accumulatedAngle += animationSpeed * 0.00001 * deltaTime;
+        
+        render(accumulatedAngle);
     }
 
     setInterval(animate, 5); 
@@ -221,7 +227,7 @@
     })
 
     moveCameraSpeed = 0.3;
-
+    orbitPlant1Or2 = 0;
     //cameraRadius = Math.sqrt(camera.orbitRadius ** 2 + camera.position.z ** 2);
 
     addEventListener('keydown', (event) => {
@@ -240,15 +246,15 @@
                 break;
             case 'W':
             case 'w':
-                // near += moveCameraSpeed;
-                // far = Math.max(near + moveCameraSpeed, far - moveCameraSpeed);
-                // projection = perspective(FovInDegree * Math.PI / 180, aspectRatio, near, far);
+                cameraDistance -= moveCameraSpeed;
                 break;
             case 'S':
             case 's':
-                // near = Math.max(moveCameraSpeed, near - moveCameraSpeed);
-                // far += 0.1;
-                // projection = perspective(FovInDegree * Math.PI / 180, aspectRatio, near, far);
+                cameraDistance += moveCameraSpeed;
+                break;
+            case 'O':
+            case 'o':
+                orbitPlant1Or2 = orbitRealFakeChange(orbitPlant1Or2);
                 break;
         }
     })
@@ -336,4 +342,41 @@
         aspectRatio = canvas.width / canvas.height;
         projection = perspective(FovInDegree * Math.PI / 180, aspectRatio, near, far);
         gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+
+    // https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/WebGL_model_view_projection#view_matrix
+    function getViewMatrix(moveLeftRight, moveInOut) {
+        return translation(moveLeftRight, 0, moveInOut);
+    }
+
+    function orbitRealFakeChange(orbitReal){
+        if (orbitReal){
+            let sunRadius = 0.00465046726; // Sun radius in AU
+            let scaleOrbits = (sunModel.radius / sunRadius) / 100; // Scale factor for orbit distances
+            
+            console.log('Sun radius:', sunModel.radius, 'Scale factor:', scaleOrbits);
+            
+            mercuryModel.orbitRadius = 0.39 * scaleOrbits;
+            venusModel.orbitRadius = 0.72 * scaleOrbits;
+            earthModel.orbitRadius = 1.0 * scaleOrbits;
+            marsModel.orbitRadius = 1.52 * scaleOrbits;
+            jupiterModel.orbitRadius = 5.2 * scaleOrbits;
+            saturnModel.orbitRadius = 9.54 * scaleOrbits;
+            uranusModel.orbitRadius = 19.19 * scaleOrbits;
+            neptuneModel.orbitRadius = 30.06 * scaleOrbits;
+            moonModel.orbitRadius = 0.00257 * scaleOrbits; // Moon relative to Earth
+            return false;
+        }else{
+            let scaleOrbits = 10; // Arbitrary scale factor for fake orbits
+            mercuryModel.orbitRadius = 0.7 * scaleOrbits;
+            venusModel.orbitRadius = 1.4 * scaleOrbits;
+            earthModel.orbitRadius = 2.0 * scaleOrbits;
+            marsModel.orbitRadius = 2.6 * scaleOrbits;
+            jupiterModel.orbitRadius = 3.5 * scaleOrbits;
+            saturnModel.orbitRadius = 4.5 * scaleOrbits;
+            uranusModel.orbitRadius = 5.5 * scaleOrbits;
+            neptuneModel.orbitRadius = 6.5 * scaleOrbits;
+            moonModel.orbitRadius = 0.3 * scaleOrbits;
+            return true;
+        }
     }
