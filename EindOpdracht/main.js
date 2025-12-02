@@ -246,7 +246,7 @@
                 break;
             case 'W':
             case 'w':
-                cameraDistance -= moveCameraSpeed;
+                cameraDistance = Math.max(0, cameraDistance - moveCameraSpeed);
                 break;
             case 'S':
             case 's':
