@@ -1,6 +1,6 @@
 const ROTATION_SPEED = 0.5 // radians per second
 let intensity = 0.5; // Initial intensity
-let vecLightPos = {x: 2.0, y: 2.0, z: 2.0};
+let vecLightPos = {x: 0.0, y: -2.0, z: 0.0};
 
 function drawCube(angle) {
     // Clear canvas
@@ -82,13 +82,13 @@ let fsSource =
         vec3 lightPos = ulightPos;
         
         vec3 normalizedNormal = normalize(normal);
-        vec3 reverseLightDirection = normalize(lightPos - fragPos);
-        vec3 viewingDirection = normalize(fragPos);
-        vec3 reflectedDirection = reflect(reverseLightDirection, normalizedNormal);
+        vec3 lightDirection = normalize(lightPos - fragPos);
+        vec3 viewDirection = normalize(-fragPos); // Camera is at origin
+        vec3 reflectedDirection = reflect(-lightDirection, normalizedNormal);
         
         float ambient = 0.2;
-        float diffuse = 0.5 * max(0.0, dot(normalizedNormal, reverseLightDirection));
-        float specular = 0.5 * pow(max(0.0, dot(viewingDirection, reflectedDirection)), 32.0);
+        float diffuse = 1.0 * max(0.0, dot(normalizedNormal, lightDirection));
+        float specular = 0.5 * pow(max(0.0, dot(viewDirection, reflectedDirection)), 32.0);
         
         float lightness = ambient + diffuse + specular;
         
@@ -292,18 +292,26 @@ document.addEventListener("keydown", function(e){
         case "ArrowRight":
             // Change to red color
             break;
+        case "W":
+        case "w":
+            vecLightPos.y += 0.2;
+            gl.useProgram(program);
+            gl.uniform3f(uLightPosLoc, vecLightPos.x, vecLightPos.y, vecLightPos.z);
+            break;
+        case "S":
+        case "s":
+            vecLightPos.y -= 0.2;
+        case "A":
+        case "a":
+            vecLightPos.x -= 0.2;   
+            gl.useProgram(program);
+            gl.uniform3f(uLightPosLoc, vecLightPos.x, vecLightPos.y, vecLightPos.z);
+            break;
+        case "D":
+        case "d":
+            vecLightPos.x += 0.2;   
+            gl.useProgram(program);
+            gl.uniform3f(uLightPosLoc, vecLightPos.x, vecLightPos.y, vecLightPos.z);
+            break;
     }
-})
-
-
-document.addEventListener("mousemove", function(e) {
-    // Use e.clientX and e.clientY directly and update light position so the variables are used
-    let mouseX = e.clientX;
-    let mouseY = e.clientY;
-    
-    // Map mouse to a reasonable light position range and update the uniform
-    vecLightPos.x = (mouseX / window.innerWidth - 0.5) * 4.0 + 2.0;
-    vecLightPos.y = (0.5 - mouseY / window.innerHeight) * 4.0 + 2.0;
-    gl.useProgram(program);
-    gl.uniform3f(uLightPosLoc, vecLightPos.x, vecLightPos.y, vecLightPos.z);
 })

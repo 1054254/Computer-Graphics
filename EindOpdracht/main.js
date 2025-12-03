@@ -1,5 +1,5 @@
     // "Solar system" (https://skfb.ly/oKYnC) by dannzjs is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
-    let animationSpeed = 1; // speed of animtion
+    let animationSpeed = 1, orbitPlant1Or2; // speed of animtion
     let intensity = 1.0; // Initial intensity
     let vecLightPos = {x: 0.0, y: 0.0, z: 0.0};
     let time = 0, startTime = Date.now();
@@ -90,7 +90,7 @@
     // number from https://courses.lumenlearning.com/suny-astronomy/chapter/physical-and-orbital-data-for-the-planets/
     // Wait for sun model to load, then set up orbit positions
     setTimeout(() => {
-        orbitRealFakeChange(false); // Start with fake orbits
+        orbitPlant1Or2 = orbitRealFakeChange(false); // Start with fake orbits
         
         // Set orbit speeds (relative to Earth = 1)
         sunModel.orbitRotationSpeed = 0.0; // Sun doesn't orbit
@@ -227,7 +227,6 @@
     })
 
     moveCameraSpeed = 0.3;
-    orbitPlant1Or2 = 0;
     //cameraRadius = Math.sqrt(camera.orbitRadius ** 2 + camera.position.z ** 2);
 
     addEventListener('keydown', (event) => {
