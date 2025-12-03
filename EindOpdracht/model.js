@@ -16,7 +16,6 @@ function loadModel(name) {
 
     let model= [];
     let arrayBuffer = gl.createBuffer();
-    let radius
 
     // Wait for OBJ to load before processing
     objLoaded.then(() => {
@@ -32,11 +31,8 @@ function loadModel(name) {
             y = vertices[1]
             z = vertices[2]
 
-            radius = Math.sqrt(x*x + y*y + z*z);
-
-            model.verticesCount = vertices.length / 8;
-            model.radius = radius;
-            console.log('STL parsed, vertices:', vertices.length / 8, 'radius:', radius);
+            model.radius = Math.sqrt(x*x + y*y + z*z);
+            model.verticesCount = objData.vertexCount;            
             
             // Update buffer after loading
             gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
@@ -59,9 +55,8 @@ function loadModel(name) {
             console.log('Ready to render!');
         } catch (e) {
             console.error('error:', e);
-
         }
-    }, 100);
+    });
 
     const texture = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, texture);
@@ -92,10 +87,8 @@ function loadModel(name) {
     model.name = name;
     model.buffer = arrayBuffer;
     model.texture = texture;
-    model.verticesCount = 0; // Will be set after loading
     model.position = {x: 0, y: 0, z: 0}; // Position offset
     model.orbitRadius = 0.0; // Orbit radius
-    model.radius = radius
     model.orbitRotationSpeed = 0.0; // Orbit rotation speed
     model.planetRotationspeed = 1.0; // Planet rotation speed (default 1 day)
 
