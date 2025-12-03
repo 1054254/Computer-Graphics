@@ -90,7 +90,7 @@
     // number from https://courses.lumenlearning.com/suny-astronomy/chapter/physical-and-orbital-data-for-the-planets/
     // Wait for sun model to load, then set up orbit positions
     setTimeout(() => {
-        orbitRealFakeChange(true);
+        orbitRealFakeChange(false); // Start with fake orbits
         
         // Set orbit speeds (relative to Earth = 1)
         sunModel.orbitRotationSpeed = 0.0; // Sun doesn't orbit
@@ -352,7 +352,7 @@
     function orbitRealFakeChange(orbitReal){
         if (orbitReal){
             let sunRadius = 0.00465046726; // Sun radius in AU
-            let scaleOrbits = (sunModel.radius / sunRadius) / 100; // Scale factor for orbit distances
+            let scaleOrbits = (sunModel.radius / sunRadius); // Scale factor for orbit distances
             
             console.log('Sun radius:', sunModel.radius, 'Scale factor:', scaleOrbits);
             
