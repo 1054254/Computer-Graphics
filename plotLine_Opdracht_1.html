@@ -16,11 +16,14 @@ function plotLine(x1, y1, x2, y2) {
         var endPoint = [x1,y1]
     }
 
+	var dx = endPoint[0] - startPoint[0];
+    var dy = endPoint[1] - startPoint[1];
+
     // bereken Richtingscoëfficiënt
-    var slope = (endPoint[1] - startPoint[1]) / (endPoint[0] - startPoint[0]);
+    var slope = dy / dx;
     
     // bepaal of we per x of per y moeten tekenen aan de hand van de richtingscoëfficiënt
-    if (startPoint[1] === endPoint[1] && startPoint[0] != endPoint[0]) {
+    if (Math.abs(dx) >= Math.abs(dy)) {
         // teken lijn per x pixel
         for (let x = startPoint[0]; x <= endPoint[0]; x++){
             let y = Math.round(startPoint[1] + slope * (x - startPoint[0]));    
