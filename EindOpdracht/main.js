@@ -119,6 +119,8 @@
 
         moonModel.parentPlanet = earthModel;
         saturnRingModel.parentPlanet = saturnModel;
+
+        sunModel.ambient = 0.8; // Sun is very bright
     }, 500); // Wait 500ms for sun to load
 
 
