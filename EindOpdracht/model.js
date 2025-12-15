@@ -6,11 +6,11 @@ function loadModel(name) {
 
     fetch(getModelUrl(name))
     .then(response => {
-        console.log('Fetching STL...');
+        console.log('Fetching OBJ...');
         return response.text();
     })
     .then(fileContent => {
-        console.log('STL downloaded, size:', fileContent.length, 'bytes');
+        console.log('OBJ downloaded, size:', fileContent.length, 'bytes');
         
         // Use setTimeout to allow UI to update
         setTimeout(() => {
@@ -25,7 +25,7 @@ function loadModel(name) {
 
                 model.verticesCount = vertices.length / 8;
                 model.radius = radius;
-                console.log('STL parsed, vertices:', vertices.length / 8, 'radius:', radius);
+                console.log('OBJ parsed, vertices:', vertices.length / 8, 'radius:', radius);
                 
                 // Update buffer after loading
                 gl.bindBuffer(gl.ARRAY_BUFFER, arrayBuffer);
@@ -53,7 +53,7 @@ function loadModel(name) {
         }, 100);
     })
     .catch(error => {
-        console.error('Error loading STL:', error);
+        console.error('Error loading OBJ:', error);
     });
 
     const texture = gl.createTexture();
@@ -91,6 +91,9 @@ function loadModel(name) {
     model.radius = radius
     model.orbitRotationSpeed = 0.0; // Orbit rotation speed
     model.planetRotationspeed = 1.0; // Planet rotation speed (default 1 day)
+    model.ambient = 0.2; // Ambient light factor
+    model.diffuse = 0.7; // Diffuse light factor
+    model.specular = 0.5; // Specular light factor
 
     return model
 }
@@ -257,6 +260,45 @@ function getRingAngle(x, y, z, plane) {
         case 'yz': return Math.atan2(z, y);
         default: return Math.atan2(z, x);
     }
+}
+
+function parseOBJ(fileContent) {
+    const lines = fileContent.split('\n');
+    let vertices = [];
+    let normals = [];
+    let texCoords = [];
+    let vertexData = [];
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        const parts = line.split(/\s+/);
+        switch(parts[0]){
+            case 'v':
+                vertices.push([
+                    parseFloat(parts[1]),
+                    parseFloat(parts[2]),
+                    parseFloat(parts[3])
+                ]);
+                break;
+            case 'vn':
+                normals.push([
+                    parseFloat(parts[1]),
+                    parseFloat(parts[2]),
+                    parseFloat(parts[3])
+                ]);
+                break;
+            case 'vt':
+                texCoords.push([
+                    parseFloat(parts[1]),
+                    parseFloat(parts[2])
+                ]);
+                break;
+            default:
+                console.warn('Unknown OBJ line ' + i + ' start: ', firstword);
+                break;
+        }
+    }
+    return vertexData;
 }
 
 function getTextureUrl(name) {

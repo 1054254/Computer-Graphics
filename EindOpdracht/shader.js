@@ -9,12 +9,14 @@ function vertexShader() {
     out vec2 vTexCoord;
     
     void main() {
-        vNormal = aNormal;
-        vPos = aPos;
+        // Transform position and normal to world space for proper lighting
+        vec4 worldPos = uTransform * vec4(aPos, 1.0);
+        vPos = worldPos.xyz / worldPos.w;
+        vNormal = mat3(uTransform) * aNormal;
         vTexCoord = aTexCoord;
         
         // Apply the combined transformation matrix
-        gl_Position = uTransform * vec4(aPos, 1.0);
+        gl_Position = worldPos;
     }`;
 }
 
@@ -25,25 +27,27 @@ function fragmentShader() {
     in vec3 vPos;
     in vec2 vTexCoord;
     uniform vec3 uLightPos;
+    uniform vec3 uCameraPos;
     uniform sampler2D uTexture;
-    uniform bool isSun;
+    uniform float uAmbient;
+    uniform float uDiffuse;
+    uniform float uSpecular;
     out vec4 fragColor;
     void main() {
-        // Simple directional lighting
-        vec3 lightDir = normalize(uLightPos);
-        vec3 normal = normalize(vNormal);
-        float diff = max(dot(normal, lightDir), 0.0);
+        vec3 normalizedNormal = normalize(vNormal);
+        vec3 lightDirection = normalize(uLightPos - vPos);
+        vec3 viewDirection = normalize(uCameraPos - vPos);
+        vec3 reflectedDirection = reflect(-lightDirection, normalizedNormal);
         
         // Sample texture
         vec3 texColor = texture(uTexture, vTexCoord).rgb;
-        
-        vec3 ambient = 0.7 * texColor;
-        // Ambient + diffuse lighting
-        if (isSun) {
-            ambient *= 2.0;
-        }
-        vec3 diffuse = diff * texColor;
-        vec3 light = ambient + diffuse;
-        fragColor = vec4(light, 1.0);
+
+        float ambient = uAmbient;
+        float diffuse = uDiffuse * max(0.0, dot(normalizedNormal, lightDirection));
+        float specular = uSpecular * pow(max(0.0, dot(viewDirection, reflectedDirection)), 32.0);
+
+        float light = ambient + diffuse + specular;
+
+        fragColor = vec4(texColor * light, 1.0);
     }`;
 }

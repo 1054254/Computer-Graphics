@@ -179,11 +179,10 @@
                 // Send final combined matrix to shader
                 gl.uniformMatrix4fv(transformLocation, false, finalTransform);
 
-                if (model.name === 'sun') {
-                    gl.uniform1i(isSun, 1); // Set to true for sun
-                } else {
-                    gl.uniform1i(isSun, 0); // Set to false for other planets
-                }
+                gl.uniform3fv(gl.getUniformLocation(program, "uCameraPos"), [0, -cameraDistance, 0]);
+                gl.uniform1f(gl.getUniformLocation(program, "uAmbient"), model.ambient);
+                gl.uniform1f(gl.getUniformLocation(program, "uDiffuse"), model.diffuse);
+                gl.uniform1f(gl.getUniformLocation(program, "uSpecular"), model.specular);
 
                 // Bind the model's buffer and texture before drawing
                 gl.bindBuffer(gl.ARRAY_BUFFER, model.buffer);

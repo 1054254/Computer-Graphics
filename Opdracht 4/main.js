@@ -106,7 +106,7 @@ let fsSource =
 
 
         // Mix between 2 colors on checker pattern
-        vec3 color2 = abs(normalizedNormal);         // Color based on face orientation
+        vec3 color2 = abs(normalize(originalNormal)+normalizedNormal);         // Color based on face orientation
         vec3 color = mix(color1, color2, checker / 2.0) * uIntensity;
         
         fragColor = vec4(color, 1.0);
@@ -229,7 +229,7 @@ image.addEventListener("load", function() {
 gl.clearColor(0.1, 0.1, 0.1, 1); // r, g, b, alpha
 
 let uIntensityLoc = gl.getUniformLocation(program, "uIntensity");
-gl.uniform1f(uIntensityLoc, 0.5);
+gl.uniform1f(uIntensityLoc, 0.3);
 
 let uLightPosLoc = gl.getUniformLocation(program, "ulightPos");
 gl.uniform3f(uLightPosLoc, vecLightPos.x, vecLightPos.y, vecLightPos.z);
