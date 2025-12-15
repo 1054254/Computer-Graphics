@@ -1,10 +1,9 @@
     // "Solar system" (https://skfb.ly/oKYnC) by dannzjs is licensed under Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/).
     let animationSpeed = 1, orbitPlant1Or2; // speed of animtion
-    let intensity = 1.0; // Initial intensity
     let vecLightPos = {x: 0.0, y: 0.0, z: 0.0};
     let time = 0, startTime = Date.now();
     let accumulatedAngle = 0; // Track the total angle to avoid jumps
-    let checkerEnabled = 0.0; // Toggle for checker pattern
+    let checkerEnabled = false; // Toggle for checker pattern
     let near = 0.1, far = 100.0, FovInDegree = 90, aspectRatio = 1.0;
     let projection, fixedRotation, scaleMatrix, viewMatrix;
     let cameraDistance = 3.0;
@@ -88,13 +87,13 @@
     models.push(moonModel);
 
     // number from https://courses.lumenlearning.com/suny-astronomy/chapter/physical-and-orbital-data-for-the-planets/
-    // Wait for sun model to load, then set up orbit positions
+    // Wait for models to load, then set up orbit information
     setTimeout(() => {
         orbitPlant1Or2 = orbitRealFakeChange(false); // Start with fake orbits
         
         // Set orbit speeds (relative to Earth = 1)
         sunModel.orbitRotationSpeed = 0.0; // Sun doesn't orbit
-        mercuryModel.orbitRotationSpeed = 1/ 0.24; // Mercury orbits faster
+        mercuryModel.orbitRotationSpeed = 1/ 0.24;
         venusModel.orbitRotationSpeed = 1/ 0.6;
         earthModel.orbitRotationSpeed = 1.0;
         marsModel.orbitRotationSpeed = 1/ 1.88;
@@ -103,7 +102,7 @@
         saturnRingModel.orbitRotationSpeed = 1/ 29.46;
         uranusModel.orbitRotationSpeed = 1/ 84.01;
         neptuneModel.orbitRotationSpeed = 1/ 164.82;
-        moonModel.orbitRotationSpeed = 1/ 0.0748; // Moon orbits Earth faster
+        moonModel.orbitRotationSpeed = 1/ 0.0748;
 
         // Set planet rotation speeds where 1 is one a day on earth
         sunModel.planetRotationspeed = 25.4; // Sun rotates about once per 25.4 days
@@ -121,7 +120,7 @@
         saturnRingModel.parentPlanet = saturnModel;
 
         sunModel.ambient = 0.8; // Sun is very bright
-    }, 500); // Wait 500ms for sun to load
+    }, 500); // Wait 500ms
 
 
     // Create individual transformation matrices
@@ -181,6 +180,7 @@
                 // Send final combined matrix to shader
                 gl.uniformMatrix4fv(transformLocation, false, finalTransform);
 
+                gl.uniform1i(gl.getUniformLocation(program, "uCheckerEnabled"), checkerEnabled ? 1 : 0);
                 gl.uniform3fv(gl.getUniformLocation(program, "uCameraPos"), [0, -cameraDistance, 0]);
                 gl.uniform1f(gl.getUniformLocation(program, "uAmbient"), model.ambient);
                 gl.uniform1f(gl.getUniformLocation(program, "uDiffuse"), model.diffuse);
@@ -240,9 +240,9 @@
                 break;
             case 'C':
             case 'c':
-                checkerEnabled = checkerEnabled > 0.5 ? 0.0 : 1.0;
+                checkerEnabled = !checkerEnabled;
                 // Update all mesh materials
-                console.log('Checker pattern:', checkerEnabled > 0.5 ? 'ON' : 'OFF');
+                console.log('Checker pattern:', checkerEnabled ? 'ON' : 'OFF');
                 break;
             case 'W':
             case 'w':
