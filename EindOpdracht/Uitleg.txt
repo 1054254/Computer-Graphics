@@ -1,0 +1,98 @@
+ZONNESTELSEL SIMULATIE - COMPUTER GRAPHICS EINDOPDRACHT
+========================================================
+
+PROJECTBESCHRIJVING
+-------------------
+Een interactieve 3D visualisatie van ons zonnestelsel met realistische planeten, manen en texturen.
+Het project is gebouwd met WebGL2 en toont alle planeten van ons zonnestelsel die om de zon draaien,
+inclusief Saturnus' ringen en de maan van de Aarde.
+
+De simulatie bevat:
+- Alle 8 planeten: Mercurius, Venus, Aarde, Mars, Jupiter, Saturnus, Uranus en Neptunus
+- De Zon als centrale lichtbron
+- De Maan die om de Aarde draait
+- Realistische texturen voor elk hemellichaam
+
+
+HULPBESTANDEN (PROJECT STRUCTUUR)
+----------------------------------
+
+HOOFDBESTANDEN:
+1. index.html
+   - HTML entry point voor de applicatie
+   - Laadt alle JavaScript bestanden in de juiste volgorde
+
+2. main.js
+   - Hoofdlogica van de applicatie
+   - Initialiseert WebGL2 context en shaders
+   - Beheert camera, projectie en view matrices
+   - Bevat de render loop en animatie logica
+   - Implementeert alle transformaties (rotatie, translatie, schaal)
+   - Beheert gebruikersinvoer via keyboard events
+
+3. shader.js
+   - Bevat de vertex shader en fragment shader code
+   - Vertex shader: transformeert 3D posities en normalen
+   - Fragment shader: implementeert Phong lighting model
+   - Ondersteunt texture mapping en optioneel checker pattern
+
+4. model.js
+   - Laadt en parseert OBJ bestanden
+   - load vertex data (posities, normalen, texture coördinaten)
+   - Laadt texturen voor elk hemellichaam
+   - Creëert WebGL buffers voor geometry data
+
+3D ASSETS:
+5. solar-system/obj/solarSystem.obj
+   - Bevat alle 3D geometry voor planeten, maan en zon
+   - Elk object heeft een unieke naam (sun, mercury, venus, etc.)
+
+6. solar-system/textures/ (11 texturen):
+   - sun.jpeg         - Textuur voor de zon
+   - mercury.jpeg     - Textuur voor Mercurius
+   - venus.jpeg       - Textuur voor Venus
+   - earth.jpeg       - Textuur voor de Aarde
+   - moon.jpeg        - Textuur voor de maan
+   - mars.jpeg        - Textuur voor Mars
+   - jupiter.jpeg     - Textuur voor Jupiter
+   - saturn.jpeg      - Textuur voor Saturnus
+   - saturn_ring.png  - Textuur voor Saturnus' ringen (met transparantie)
+   - uranus.jpeg      - Textuur voor Uranus
+   - neptune.jpeg     - Textuur voor Neptunus
+
+
+GEBRUIKERSINTERACTIE (TOETSENBORD CONTROLS)
+--------------------------------------------
+
+ANIMATIE SNELHEID:
+- Pijltje OMHOOG (↑)    : Verhoog animatiesnelheid (+0.1)
+- Pijltje OMLAAG (↓)    : Verlaag animatiesnelheid (-0.1, minimum 0)
+
+CAMERA BESTURING:
+- W toets               : Zoom in (camera dichter naar zonnestelsel)
+- S toets               : Zoom uit (camera verder van zonnestelsel)
+
+VISUALISATIE OPTIES:
+- C toets               : Toggle checker pattern aan/uit
+- O toets               : Wissel tussen realistische en kunstmatige baanafstanden
+                          * Realistische afstanden tonen de echte verhoudingen (zeer groot)
+                          * Kunstmatige afstanden maken alle planeten goed zichtbaar
+
+TECHNISCHE DETAILS:
+- De planeten draaien om hun eigen as met realistische snelheden
+- De omloopsnelheden zijn gebaseerd op echte astronomische data
+
+
+ASTRONOMISCHE DATA
+------------------
+De simulatie gebruikt echte astronomische gegevens:
+- Omloopsnelheden relatief aan de Aarde (Aarde = 1.0 jaar)
+- Rotatiesnelheden in dagen (Aarde = 1.0 dag)
+- Baanafstanden in Astronomical Units (AU)
+
+Bron: https://courses.lumenlearning.com/suny-astronomy/chapter/physical-and-orbital-data-for-the-planets/
+
+CREDITS
+-------
+3D Model: "Solar system" (https://skfb.ly/oKYnC) by dannzjs
+Licentie: Creative Commons Attribution (http://creativecommons.org/licenses/by/4.0/)

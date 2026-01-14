@@ -122,6 +122,9 @@
         sunModel.ambient = 0.8; // Sun is very bright
     }, 500); // Wait 500ms
 
+    models.forEach(model => {
+        // set static matrix - identity matrix as default, can be customized per model
+    });
 
     // Create individual transformation matrices
     fixedRotation = rotateX(Math.PI / 6); // Rotate 30° around x-axis
@@ -139,8 +142,6 @@
     // Get uniform location for the combined matrix
     let transformLocation = gl.getUniformLocation(program, "uTransform");
 
-    let isSun = gl.getUniformLocation(program, "isSun");
-    gl.uniform1i(isSun, 0); // Set to true for sun
 
     function render(angle) {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -228,7 +229,6 @@
     })
 
     moveCameraSpeed = 0.3;
-    //cameraRadius = Math.sqrt(camera.orbitRadius ** 2 + camera.position.z ** 2);
 
     addEventListener('keydown', (event) => {
         switch(event.key) {
@@ -352,8 +352,8 @@
         return translation(moveLeftRight, 0, moveInOut);
     }
 
-    function orbitRealFakeChange(orbitReal){
-        if (orbitReal){
+    function orbitRealFakeChange(orbitRealBool){
+        if (orbitRealBool){
             let sunRadius = 0.00465046726; // Sun radius in AU
             let scaleOrbits = (sunModel.radius / sunRadius); // Scale factor for orbit distances
             

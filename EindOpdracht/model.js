@@ -95,6 +95,13 @@ function loadModel(name) {
     model.diffuse = 0.7; // Diffuse light factor
     model.specular = 0.5; // Specular light factor
 
+    model.staticMatrix = new Float32Array([
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+    ]);
+
     return model
 }
 
