@@ -57,19 +57,29 @@
         ]
     }
     
-    function scale(x, y, z) {
+    function scale(scale) {
         return [
-            [x, 0, 0, 0],
-            [0, y, 0, 0],
-            [0, 0, z, 0],
+            [scale, 0, 0, 0],
+            [0, scale, 0, 0],
+            [0, 0, scale, 0],
             [0, 0, 0, 1]
         ]
     }
     
+    function projection(far, aspect, near, fov) {
+        let f = 1 / Math.tan(fov / 2);
+        return [
+            [f / aspect, 0, 0, 0],
+            [0, f, 0, 0],
+            [0, 0, (far + near) / (near - far), (2 * far * near) / (near - far)],
+            [0, 0, -1, 0]
+        ]
+    }
     
-    let scaleMatrix = scale(100, 100, 100);
+    let scaleMatrix = scale(4);
     let rotXMatrix = rotateX(30 * Math.PI / 180); // Fixed rotation of 30 degrees around x-axis
-    let transMatrix = translation(500, 250, 5)
+    let transMatrix = translation(0, 0, 10)
+    let projMatrix = projection(1000, canvas.width / canvas.height, 0.1, 90 * Math.PI / 180)
      
 
     function draw() {
@@ -81,18 +91,22 @@
         let rotYMatrix = rotateY(angle * 1.5)
 
         // Combineer alle matrices
-        let transform = math.multiply(transMatrix, rotYMatrix, rotXMatrix, scaleMatrix)
+        let transform = math.multiply(projMatrix, transMatrix, rotYMatrix, rotXMatrix, scaleMatrix)
+
 
         // Transformeer vertices
         let projectedVertices = vertices.map(v => {
             let vertex = [...v, 1]
-            let transformed = math.multiply(transform, vertex)
-            
-            // Perspectief divisie
-            let z0 = transformed[3]
+            let t = math.multiply(transform, vertex)
+
+            // Perspective divide (clip → NDC)
+            let x = t[0] / t[3]
+            let y = t[1] / t[3]
+
+            // NDC → screen space
             return [
-                transformed[0]/z0,
-                transformed[1]/z0
+                (x * 0.5 + 0.5) * canvas.width,
+                (-y * 0.5 + 0.5) * canvas.height
             ]
         })
     
